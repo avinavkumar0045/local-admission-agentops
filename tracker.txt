@@ -10,3 +10,18 @@ This file tracks all facts, updates, and major architectural decisions made duri
 - Verified local Qwen model (`qwen2.5-coder:latest`, 4.7 GB) is successfully installed on Apple Silicon (M2 Air) via Ollama.
 - Generated requirements.txt with all core dependencies.
 - Generated initial README.md.
+
+[2026-08-15 13:05:00] PHASE 2 COMPLETION (KNOWLEDGE BASE)
+- Created mock admission documents (eligibility.md, fees.md).
+- Solved Python 3.13 / pip environment compatibility issues by resolving dependencies via Anaconda.
+- Developed ingest.py to parse, chunk, embed, and store knowledge into FAISS.
+- Embedded telemetry (AgentOps) hooks directly into the ingestion script (load_model, chunking, embedding, saving).
+- Successfully executed ingestion: 4 chunks embedded with dimensionality 384.
+
+[2026-08-15 13:35:00] PHASE 3 COMPLETION (BASELINE RAG AGENT)
+- Adopted strict new coding guidelines (saved in `.agents/rules/coding_guidelines.md`). Added professional file documentation headers to all project files.
+- Built `src/agent/retriever.py` to handle FAISS lookups.
+- Built `src/agent/generator.py` to handle LLM generation via `httpx` to local Qwen. 
+- Increased HTTP timeout to 120s to accommodate heavy local LLM inference on the Apple Silicon M2 chip.
+- Built `src/agent/api.py` as a FastAPI orchestrator.
+- Verified end-to-end functionality: The API successfully retrieved context and generated a highly accurate admission response while emitting all 3 AgentOps spans (retrieve_context, llm_generation, full_query_lifecycle).

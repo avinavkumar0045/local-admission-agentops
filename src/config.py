@@ -1,3 +1,8 @@
+"""
+Configuration Module
+Primary Responsibility: Centralizes all environment variables and global settings.
+Why it exists: To ensure database credentials, LLM configuration, and the AgentOps toggle are easily manageable from one place.
+"""
 import os
 from dotenv import load_dotenv
 

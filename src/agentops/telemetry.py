@@ -1,3 +1,8 @@
+"""
+AgentOps Telemetry Tracker
+Primary Responsibility: Provides the interface for the agent to emit traces and spans.
+Why it exists: To fulfill the 'Instrumentation-by-Design' requirement, allowing observability to be baked into the RAG pipeline from Day 1.
+"""
 import uuid
 from datetime import datetime
 import json
