@@ -25,3 +25,21 @@ This file tracks all facts, updates, and major architectural decisions made duri
 - Increased HTTP timeout to 120s to accommodate heavy local LLM inference on the Apple Silicon M2 chip.
 - Built `src/agent/api.py` as a FastAPI orchestrator.
 - Verified end-to-end functionality: The API successfully retrieved context and generated a highly accurate admission response while emitting all 3 AgentOps spans (retrieve_context, llm_generation, full_query_lifecycle).
+
+[2026-08-15 14:15:00] PHASE 4 COMPLETION (AGENTOPS BACKEND)
+- Set up local MySQL server via Homebrew on the host machine.
+- Executed `schema.sql` to initialize the `agentops_db` schema (sessions, traces, spans).
+- Updated `telemetry.py` to establish a persistent connection using `mysql-connector-python`.
+- Converted the `emit_span()` function to execute dynamic `INSERT` queries instead of standard print statements.
+- Verified telemetry persistence by testing `ingest.py` and querying the MySQL database directly, confirming successful logging of duration_ms and metadata.
+
+[2026-08-15 14:30:00] PHASE 5 COMPLETION (STREAMLIT UI)
+- Created `ui/styles.css` implementing a custom Glassmorphic Black theme (blur filters, glowing borders, radial gradients) for a highly premium aesthetic.
+- Developed `ui/app.py` utilizing `st.chat_message` and `st.session_state` to render a ChatGPT-style conversational interface.
+- Built Operational Transparency features: implemented a `st.expander` named "View Sources" that dynamically renders the FAISS chunks and their relevance distance underneath the AI's generated response.
+- Orchestrated the final dual-server setup: The FastAPI backend on port 8000 (logging to MySQL) and the Streamlit frontend on port 8501.
+
+[2026-08-15 14:45:00] PHASE 6 COMPLETION (GRAFANA OBSERVABILITY)
+- Automatically installed Grafana 13.1.3 via Homebrew and started the background service on port 3000.
+- Drafted exact UI instructions for the user to connect the `agentops_db` MySQL database to Grafana and write the SQL query for extracting `duration_ms` vs `span_type`.
+- The AgentOps Local RAG project is now 100% complete and functionally verified end-to-end.

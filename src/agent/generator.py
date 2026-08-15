@@ -4,7 +4,7 @@ Primary Responsibility: Manages communication with the local Qwen LLM via Ollama
 Why it exists: To encapsulate model inference logic and ensure LLM latency and prompt sizes are traced via AgentOps.
 """
 import httpx
-from datetime import datetime
+from datetime import datetime, timezone
 from src.config import OLLAMA_BASE_URL, QWEN_MODEL
 from src.agentops.telemetry import tracker
 
@@ -15,7 +15,7 @@ class LocalQwenGenerator:
         self.model_name = QWEN_MODEL
 
     async def generate_response(self, query: str, context: list, trace_id: str) -> str:
-        start_time = datetime.now()
+        start_time = datetime.now(timezone.utc)
         
         # Build prompt using retrieved context chunks
         context_text = "\n\n".join([f"Source ({r['metadata']['source']}): {r['content']}" for r in context])
@@ -49,7 +49,7 @@ Answer:"""
                     trace_id=trace_id,
                     span_type="llm_generation",
                     start_time=start_time,
-                    end_time=datetime.now(),
+                    end_time=datetime.now(timezone.utc),
                     status="success",
                     metadata={"prompt_length": len(prompt), "model": self.model_name}
                 )
@@ -60,7 +60,7 @@ Answer:"""
                 trace_id=trace_id,
                 span_type="llm_generation",
                 start_time=start_time,
-                end_time=datetime.now(),
+                end_time=datetime.now(timezone.utc),
                 status="failure",
                 error_msg=str(e)
             )

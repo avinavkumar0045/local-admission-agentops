@@ -7,7 +7,7 @@ import os
 import faiss
 import json
 import numpy as np
-from datetime import datetime
+from datetime import datetime, timezone
 from sentence_transformers import SentenceTransformer
 
 from src.agentops.telemetry import tracker
@@ -25,7 +25,7 @@ class FAISSRetriever:
             self.metadata = data["metadata"]
 
     def retrieve(self, query: str, trace_id: str, top_k: int = 2) -> list:
-        start_time = datetime.now()
+        start_time = datetime.now(timezone.utc)
         
         query_vector = self.model.encode([query])
         distances, indices = self.index.search(np.array(query_vector).astype('float32'), top_k)
@@ -43,7 +43,7 @@ class FAISSRetriever:
             trace_id=trace_id,
             span_type="retrieve_context",
             start_time=start_time,
-            end_time=datetime.now(),
+            end_time=datetime.now(timezone.utc),
             metadata={"top_k": top_k, "num_results": len(results)}
         )
         return results
