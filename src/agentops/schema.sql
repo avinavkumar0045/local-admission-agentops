@@ -1,0 +1,34 @@
+CREATE DATABASE IF NOT EXISTS agentops_db;
+USE agentops_db;
+
+CREATE TABLE IF NOT EXISTS sessions (
+    session_id VARCHAR(36) PRIMARY KEY,
+    start_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+    end_time DATETIME,
+    user_id VARCHAR(255)
+);
+
+CREATE TABLE IF NOT EXISTS traces (
+    trace_id VARCHAR(36) PRIMARY KEY,
+    session_id VARCHAR(36),
+    query TEXT,
+    start_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+    end_time DATETIME,
+    status VARCHAR(50),
+    FOREIGN KEY (session_id) REFERENCES sessions(session_id)
+);
+
+CREATE TABLE IF NOT EXISTS spans (
+    span_id VARCHAR(36) PRIMARY KEY,
+    trace_id VARCHAR(36),
+    parent_span_id VARCHAR(36),
+    span_type VARCHAR(100),
+    start_time DATETIME(3),
+    end_time DATETIME(3),
+    duration_ms FLOAT,
+    status VARCHAR(50),
+    error_type VARCHAR(255),
+    error_message TEXT,
+    metadata JSON,
+    FOREIGN KEY (trace_id) REFERENCES traces(trace_id)
+);

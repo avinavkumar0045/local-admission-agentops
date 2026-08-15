@@ -1,0 +1,1784 @@
+AGENTOPS AND EXPLAINABILITY FOR A LOCAL ADMISSION INFORMATION AGENT
+MASTER PROJECT CONTEXT AND IMPLEMENTATION BRIEF
+Version: Living Project Specification V1
+Audience: Antigravity / AI Coding Agent
+
+IMPORTANT
+This is a research-oriented engineering project. Treat this document as the current working context, not as a frozen final architecture. We will build, test, measure, discover problems, and update the design and proposal from evidence.
+
+Development philosophy:
+PLAN -> BUILD -> OBSERVE -> MEASURE -> DISCOVER -> UPDATE DESIGN/PROPOSAL -> BUILD NEXT ITERATION
+
+Never claim something is implemented until it has actually been implemented and tested.
+
+============================================================
+1. EXACT PROBLEM STATEMENT
+============================================================
+
+Problem statement:
+
+AgentOps and Explainability for a Local Admission Information Agent
+
+Use-Case Description : Instrument a local admission-information agent with traces, metrics, failure alerts, evaluation runs and explanation views, then compare observability with and without the AgentOps layer.
+
+Responsible AI / Agentic AI Focus : Operational transparency, failure detection, privacy-safe telemetry and accountable deployment.
+
+Local-First Stack : Qwen local; OpenTelemetry-style local traces; MySQL; Streamlit/Grafana; Chroma/FAISS.
+
+Outcome Measurement : Trace completeness; alert precision/recall; diagnosis time; telemetry overhead; detected failure classes.
+
+Expected Deliverables : Instrumented agent, monitoring dashboard, alert rules, failure injection tests and comparison report.
+
+CRITICAL:
+Stay close to this wording. This must not drift into a generic chatbot, generic RAG demo, or generic LLM application.
+
+The central research question is:
+Can a locally deployed admission-information agent be instrumented with an AgentOps layer that provides measurable operational transparency and failure diagnosis, and what measurable value does that layer provide compared with the same agent operating without AgentOps?
+
+============================================================
+2. WHAT WE ARE BUILDING
+============================================================
+
+We are building a local university admission-information agent.
+
+The agent should answer admission-related student questions using authoritative institutional knowledge.
+
+The project is NOT primarily about making the smartest chatbot possible.
+
+The research focus is the combination of:
+
+LOCAL LLM
++
+RAG / KNOWLEDGE RETRIEVAL
++
+EXPLAINABILITY
++
+AGENTOPS INSTRUMENTATION
++
+MONITORING
++
+FAILURE DETECTION
++
+CONTROLLED EVALUATION
+
+Questions the system should eventually answer:
+
+- What happened during a student's query?
+- Which documents were retrieved?
+- What were the retrieval scores?
+- What context reached Qwen?
+- How long did each stage take?
+- Did an error occur?
+- Which stage failed?
+- Can an operator diagnose the failure faster with AgentOps?
+- Does AgentOps introduce measurable overhead?
+- Which failure classes can be detected?
+- How complete are traces?
+- How precise and complete are alerts?
+- Can the student see evidence supporting the answer?
+- Does the system abstain when evidence is insufficient?
+
+The operational/research questions matter more than simply producing chatbot answers.
+
+============================================================
+3. RESEARCH FOUNDATION
+============================================================
+
+Three papers currently form the technical foundation:
+
+1. AgentOps: Enabling Observability of LLM Agents
+2. A Taxonomy of AgentOps for Enabling Observability of Foundation Model based Agents
+3. Taming Uncertainty via Automation: Observing, Analysing and Optimising Agentic AI Systems
+
+Interpretation:
+
+Paper 1:
+What should be traced?
+
+Paper 2:
+What artifacts should be observed across the agent lifecycle?
+
+Paper 3:
+How can observations progress from monitoring to issue detection, diagnosis, optimization, and eventually operational automation?
+
+Our project:
+Instantiate these ideas in a privacy-sensitive local university admission use case and evaluate them empirically.
+
+Do not claim that the papers prove something they do not prove.
+
+============================================================
+4. DESIGN PRINCIPLES
+============================================================
+
+1. END-TO-END OBSERVABILITY
+Important agent stages should emit structured telemetry.
+
+2. LIFECYCLE-AWARE INSTRUMENTATION
+Observability should cover relevant execution stages rather than one API call.
+
+3. DOMAIN INSTANTIATION
+Generic AgentOps concepts should be mapped to the admission domain.
+
+4. EXPLAINABILITY BY DESIGN
+Useful evidence should be available to the end user, not only to operators.
+
+5. LOCAL-FIRST PRIVACY
+The LLM should run locally and institutional information should not need to leave the local environment.
+
+6. CONTROLLED COMPARISON
+AgentOps ON and OFF should use the same functional agent, test set, model, knowledge base, hardware and configuration wherever possible.
+
+7. FAILURE-ORIENTED EVALUATION
+Deliberately inject failures instead of testing only successful queries.
+
+8. REPRODUCIBILITY
+Record model version, configuration, traces, evaluation data and experiment metadata sufficiently to reproduce experiments.
+
+============================================================
+5. KEY ARCHITECTURAL DECISION: INSTRUMENTATION BY DESIGN
+============================================================
+
+We considered:
+
+OPTION 1:
+Build the agent first and add AgentOps later.
+
+Problems:
+- Retrofitting observability can require architectural rework.
+- Trace boundaries may be poorly designed.
+- Early execution information is lost.
+- Instrumentation can become tightly coupled to application code.
+- The baseline and AgentOps-enabled systems can drift apart.
+
+OPTION 2:
+Build AgentOps into the agent from Day 1.
+
+Preferred approach:
+INSTRUMENTATION-BY-DESIGN.
+
+Important clarification:
+Do not build the entire monitoring platform on Day 1.
+
+Instead, create a clean instrumentation interface from the beginning.
+
+Concept:
+
+Retrieval component -> emit span
+Prompt construction -> emit span
+Qwen generation -> emit span
+Explanation -> emit span
+
+The functional agent should not care whether telemetry is:
+- stored,
+- visualized,
+- alerted on,
+- discarded,
+- disabled.
+
+The instrumentation interface must be separable from the telemetry backend.
+
+Central experiment:
+
+                    SAME AGENT CODEBASE
+                           |
+                 +---------+---------+
+                 |                   |
+            AGENTOPS OFF        AGENTOPS ON
+                 |                   |
+           no telemetry       traces + metrics
+                 |                   |
+                 +---------+---------+
+                           |
+                       SAME TEST SET
+                           |
+                       COMPARISON
+
+This provides a stronger controlled experiment.
+
+============================================================
+6. DO NOT LET THE PROJECT BECOME
+============================================================
+
+Do not turn this into:
+- a generic chatbot,
+- a cloud-only LLM application,
+- a generic RAG demo,
+- a dashboard-only project,
+- a fine-tuning project without evidence,
+- an oversized enterprise platform,
+- an implementation where AgentOps is merely ordinary logging.
+
+Do not claim:
+"AgentOps improves LLM accuracy."
+
+The research focus is:
+- operational transparency,
+- failure detection,
+- diagnosis,
+- observability,
+- telemetry overhead,
+- accountable deployment,
+- explainability.
+
+============================================================
+7. TARGET SYSTEM ARCHITECTURE
+============================================================
+
+High-level architecture:
+
+                         STUDENT
+                            |
+                            v
+                     STREAMLIT UI
+                            |
+                            v
+                    FASTAPI BACKEND
+                            |
+              +-------------+-------------+
+              |                           |
+              v                           v
+        FUNCTIONAL PATH             AGENTOPS PATH
+              |                           |
+              v                           v
+       QUERY / RAG PROCESSING       TRACE COLLECTION
+              |                           |
+              v                           v
+       FAISS + EMBEDDINGS             METRICS
+              |                           |
+              v                           v
+          LOCAL QWEN                   ALERTS
+              |                           |
+              v                           v
+       EXPLAINABILITY                  MYSQL
+              |                           |
+              v                           v
+        FINAL RESPONSE                 GRAFANA
+
+Key idea:
+FUNCTIONAL PIPELINE emits structured telemetry to an independent
+OPERATIONAL / AGENTOPS PIPELINE.
+
+============================================================
+8. FUNCTIONAL AI PIPELINE
+============================================================
+
+Student Query
+    |
+Streamlit
+    |
+FastAPI
+    |
+Retrieval
+    |
+Relevant admission context
+    |
+Local Qwen
+    |
+Explainability
+    |
+Final response
+
+Institution-specific facts must come from the retrieved knowledge base.
+
+Examples:
+- deadlines,
+- eligibility,
+- fees,
+- scholarships,
+- reservation rules,
+- required documents,
+- program requirements.
+
+Do not rely on Qwen's pretrained knowledge for institution-specific facts.
+
+============================================================
+9. KNOWLEDGE BASE AND DOMAIN ADAPTATION
+============================================================
+
+Initial approach:
+Do NOT retrain Qwen.
+
+Use:
+PRETRAINED LOCAL QWEN + RETRIEVAL-AUGMENTED GENERATION.
+
+Domain knowledge is incorporated through a curated institutional knowledge base.
+
+Potential source categories:
+- university admission brochures,
+- eligibility documents,
+- fee structures,
+- academic calendars,
+- scholarship information,
+- reservation policies,
+- FAQs,
+- official regulatory material,
+- relevant UGC material,
+- relevant AICTE material,
+- AISHE information where appropriate.
+
+Knowledge construction:
+
+OFFICIAL DOCUMENTS
+      |
+CLEANING / PARSING
+      |
+DOCUMENT CHUNKING
+      |
+SENTENCE TRANSFORMER EMBEDDINGS
+      |
+FAISS VECTOR INDEX
+      |
+QUERY-TIME RETRIEVAL
+      |
+RETRIEVED CONTEXT
+      |
+LOCAL QWEN (RAG)
+      |
+EXPLAINABLE RESPONSE
+
+Important:
+External datasets can help during early testing, but final admission-domain evaluation should prioritize authoritative institution-specific documents.
+
+============================================================
+10. RAG PIPELINE DIAGRAM SPECIFICATION
+============================================================
+
+Suggested title:
+Figure X. Knowledge Base Construction and Retrieval-Augmented Generation (RAG) Pipeline
+
+The figure should show:
+
+OFFLINE:
+Official Admission Documents
+-> Cleaning and Parsing
+-> Document Chunking
+-> Sentence Transformer Embeddings
+-> FAISS Vector Index
+
+ONLINE:
+Student Query
+-> Query Embedding
+-> Similarity Search against FAISS
+-> Retrieved Context
+-> Local Qwen LLM
+-> Explainability Layer
+-> Explainable Admission Response
+
+The student query must NOT be shown as if it becomes a stored document in FAISS.
+
+============================================================
+11. FOUR CORE DATASETS
+============================================================
+
+DATASET 1: ADMISSION KNOWLEDGE BASE
+
+Purpose:
+Primary RAG corpus.
+
+Contains:
+Official admission documents, policies, brochures, FAQs, regulations, eligibility, fees, calendars, scholarships, etc.
+
+This is different from the Golden QA dataset.
+
+------------------------------------------------------------
+
+DATASET 2: GOLDEN QA DATASET
+
+Target:
+100-200 manually verified question-answer pairs.
+
+Purpose:
+Evaluate answer correctness and grounding.
+
+Suggested fields:
+question
+expected_answer
+source_document
+source_section
+acceptable_answer_variants
+expected_evidence
+difficulty
+category
+
+Categories can include:
+- eligibility,
+- application process,
+- deadlines,
+- fees,
+- documents,
+- scholarships,
+- reservation,
+- programs,
+- hostel,
+- admissions procedure,
+- unsupported/out-of-scope questions.
+
+Ground truth should be manually verified. Do not rely entirely on LLM-generated answers as ground truth.
+
+------------------------------------------------------------
+
+DATASET 3: FAILURE INJECTION DATASET
+
+Purpose:
+Test failure detection and diagnosis.
+
+Potential failure classes:
+- wrong eligibility,
+- wrong deadline,
+- wrong fee,
+- wrong scholarship condition,
+- wrong reservation rule,
+- irrelevant retrieval,
+- missing retrieval evidence,
+- conflicting documents,
+- unsupported query,
+- corrupted context,
+- retrieval failure,
+- generation failure,
+- timeout,
+- malformed response,
+- database failure,
+- missing span,
+- broken trace linkage.
+
+Research resources discussed:
+RAGTruth
+HaluBench
+HalluRAG
+SQuAD 2.0
+MS MARCO
+
+Important:
+Use these resources to inspire taxonomy/methodology. Do not simply copy them and call them an admission-domain benchmark.
+
+------------------------------------------------------------
+
+DATASET 4: TELEMETRY AND PERFORMANCE DATASET
+
+Purpose:
+Store runtime information required for AgentOps evaluation.
+
+Possible fields:
+trace_id
+session_id
+span_id
+span_type
+parent_span_id
+timestamp
+duration
+status
+error_type
+retrieval scores
+retrieved document IDs
+top-k
+model identifier
+generation latency
+token counts if available
+end-to-end latency
+alert events
+evaluation results
+
+This dataset is generated by the system.
+
+============================================================
+12. POSSIBLE FIFTH DATASET: EXPLAINABILITY VALIDATION
+============================================================
+
+Potential extension.
+
+For selected questions record:
+question
+generated_answer
+supporting_evidence
+confidence/relevance indicator
+explanation
+human judgment
+
+Possible labels:
+- evidence supports answer,
+- evidence partially supports answer,
+- evidence does not support answer.
+
+This would allow evaluation of evidence alignment and transparency.
+
+Do not make this mandatory until implementation confirms feasibility.
+
+============================================================
+13. QWEN
+============================================================
+
+Qwen is the local LLM family.
+
+Development hardware:
+Apple Silicon Mac
+M4
+16 GB unified memory
+
+Initial model choice should favor:
+- good local performance,
+- reasonable memory use,
+- instruction following,
+- RAG compatibility,
+- future AgentOps integration.
+
+Record exact:
+- model name,
+- model tag/version,
+- runtime,
+- quantization,
+- context length,
+- hardware,
+- inference settings.
+
+Do not hard-code a model version into the final research document until it has been installed and verified.
+
+Potential local runtimes:
+- Ollama,
+- MLX,
+- llama.cpp,
+- Hugging Face Transformers,
+- LM Studio.
+
+For initial exploration, a simple local runtime such as Ollama can be used, but runtime choice should eventually be documented with evidence.
+
+============================================================
+14. EMBEDDINGS AND VECTOR SEARCH
+============================================================
+
+Embedding model:
+Sentence Transformers.
+
+Vector search:
+FAISS.
+
+Reason:
+- local,
+- lightweight,
+- efficient,
+- easy to reproduce,
+- no external vector service.
+
+Chroma is an acceptable alternative because the original problem statement explicitly permits Chroma/FAISS.
+
+Potential retrieval measurements:
+- Recall@K,
+- Precision@K where ground truth permits,
+- retrieval hit rate,
+- evidence relevance.
+
+============================================================
+15. BACKEND AND FRONTEND
+============================================================
+
+Frontend:
+Streamlit.
+
+Purpose:
+Student-facing admission interface and lightweight evaluation interface.
+
+Backend:
+Python + FastAPI.
+
+Purpose:
+- orchestration,
+- retrieval,
+- Qwen inference,
+- explanation assembly,
+- telemetry emission.
+
+Keep dashboard logic separate from functional API logic.
+
+============================================================
+16. MYSQL
+============================================================
+
+MySQL is the primary relational telemetry store.
+
+Potential entities:
+sessions
+traces
+spans
+metrics
+alerts
+evaluation_runs
+evaluation_results
+failure_events
+configuration_metadata
+
+Do not store unnecessary personal information.
+
+Privacy-safe telemetry is a core objective.
+
+Use identifiers instead of personal data where possible.
+
+============================================================
+17. AGENTOPS TRACE MODEL
+============================================================
+
+Hierarchy:
+
+SESSION
+  |
+  +-- TRACE (one query/execution)
+         |
+         +-- query_received
+         +-- retrieval
+         +-- prompt_construction
+         +-- qwen_generation
+         +-- explanation
+         +-- response
+
+Each span should have at minimum:
+- trace_id,
+- span_id,
+- parent_span_id,
+- span_type,
+- start timestamp,
+- duration,
+- status,
+- error information.
+
+Additional fields can be added for retrieval, generation, evaluation and monitoring.
+
+Do not implement every theoretical taxonomy field just because a paper mentions it. Implement what is relevant and measurable.
+
+============================================================
+18. OPENTELEMETRY-STYLE LOCAL TRACING
+============================================================
+
+The problem statement says:
+"OpenTelemetry-style local traces."
+
+Goal:
+Structured, standardized, queryable traces.
+
+Possible architecture:
+
+Agent component
+    |
+Instrumentation API
+    |
+Local collector/storage
+    |
+MySQL
+    |
+Grafana
+
+The project does not need to become a huge enterprise observability platform.
+
+============================================================
+19. AGENTOPS ON/OFF
+============================================================
+
+The codebase should support a switch such as:
+
+AGENTOPS_ENABLED=true
+
+and:
+
+AGENTOPS_ENABLED=false
+
+OFF:
+- functional agent works,
+- no expensive telemetry persistence,
+- minimal/no AgentOps storage.
+
+ON:
+- spans generated,
+- metrics collected,
+- telemetry stored,
+- alerts enabled,
+- dashboards populated.
+
+The functional path should remain unchanged.
+
+============================================================
+20. EXPLAINABILITY
+============================================================
+
+Do not expose private chain-of-thought.
+
+Explainability should be evidence-based.
+
+Student-facing response can include:
+- answer,
+- supporting passage/document,
+- source identifier,
+- confidence/relevance indicator,
+- concise justification.
+
+Example:
+
+Answer:
+"Applicants must submit X."
+
+Supporting Evidence:
+Admission Policy 2026, Section 3.2.
+
+Evidence Confidence:
+High.
+
+Why:
+"The answer is supported by the eligibility condition stated in Section 3.2."
+
+Operator view can contain richer telemetry.
+
+Student view should remain concise.
+
+============================================================
+21. GUARDRAILS AND ABSTENTION
+============================================================
+
+The system should not confidently answer when evidence is insufficient.
+
+Concept:
+
+Query
+ |
+Retrieval
+ |
+ +-- strong evidence --> Qwen --> answer
+ |
+ +-- weak/no evidence --> abstain / ask clarification
+
+Potential response:
+"I could not find sufficient evidence in the available admission documents to answer this reliably."
+
+Possible guardrails:
+- evidence threshold,
+- unsupported-topic detection,
+- conflicting-document detection,
+- response validation,
+- sensitive-information handling.
+
+Start simple.
+
+============================================================
+22. GRAFANA DASHBOARD
+============================================================
+
+Operator dashboard should focus on diagnosis.
+
+SYSTEM HEALTH:
+- query count,
+- success/failure count,
+- average latency,
+- p95 latency.
+
+TRACE:
+- traces over time,
+- spans per trace,
+- incomplete traces,
+- error traces.
+
+RETRIEVAL:
+- retrieval latency,
+- top-k,
+- similarity scores,
+- retrieval failures.
+
+GENERATION:
+- Qwen latency,
+- token usage if available,
+- model errors.
+
+FAILURE:
+- failure count,
+- failure type,
+- alert count,
+- precision/recall.
+
+DIAGNOSTICS:
+- session -> trace -> span drill-down,
+- failed span,
+- error metadata,
+- timestamps.
+
+============================================================
+23. ALERTING
+============================================================
+
+Potential alert rules:
+1. retrieval failure,
+2. model generation error,
+3. high latency,
+4. repeated failures,
+5. low retrieval/evidence score,
+6. incomplete trace,
+7. sudden increase in failure rate.
+
+Start with configurable thresholds.
+
+Do not invent final thresholds before experiments.
+
+============================================================
+24. FAILURE INJECTION
+============================================================
+
+Failure injection is a required deliverable.
+
+Failure classes:
+
+RETRIEVAL:
+- no relevant document,
+- irrelevant document,
+- empty index,
+- incorrect top-k.
+
+KNOWLEDGE:
+- outdated document,
+- conflicting document,
+- incomplete document.
+
+GENERATION:
+- hallucination,
+- unsupported claim,
+- incorrect admission fact.
+
+INFRASTRUCTURE:
+- database unavailable,
+- model unavailable,
+- timeout,
+- malformed response.
+
+OBSERVABILITY:
+- missing span,
+- broken trace relationship,
+- telemetry storage failure.
+
+INPUT:
+- empty query,
+- ambiguous query,
+- out-of-scope query.
+
+Each failure should record:
+failure ID
+failure class
+expected behavior
+injection mechanism
+detection rule
+expected alert
+actual alert
+diagnosis path
+
+============================================================
+25. REQUIRED EVALUATION
+============================================================
+
+Primary metrics from the original problem statement:
+
+1. Trace completeness
+2. Alert precision/recall
+3. Diagnosis time
+4. Telemetry overhead
+5. Detected failure classes
+
+Additional useful metrics:
+- answer accuracy,
+- faithfulness,
+- retrieval effectiveness,
+- evidence alignment,
+- abstention correctness.
+
+Do not replace the required AgentOps metrics with generic LLM metrics.
+
+============================================================
+26. TRACE COMPLETENESS
+============================================================
+
+Measure how many expected execution stages appear in a trace.
+
+Example expected spans:
+query_received
+retrieval
+prompt_construction
+generation
+explanation
+
+If 5 expected and 5 appear:
+100%
+
+If 4 appear:
+80%
+
+Define the exact formula before experiments.
+
+Also test:
+- missing span,
+- broken parent-child relationship,
+- missing trace ID,
+- incomplete trace after failure.
+
+============================================================
+27. ALERT PRECISION / RECALL
+============================================================
+
+Use injected failures as ground truth.
+
+Precision:
+Of all alerts raised, how many correspond to actual failures?
+
+Recall:
+Of all actual injected failures, how many were detected?
+
+Precision = TP / (TP + FP)
+
+Recall = TP / (TP + FN)
+
+Do not merely say "alerts work." Produce measurable results.
+
+============================================================
+28. DIAGNOSIS TIME
+============================================================
+
+Compare:
+
+WITHOUT AGENTOPS:
+logs -> manual investigation -> diagnosis
+
+WITH AGENTOPS:
+dashboard -> trace -> failed span -> diagnosis
+
+Measure:
+- investigation start,
+- diagnosis completion,
+- failure class,
+- experiment condition.
+
+Do not claim improvement before measuring.
+
+============================================================
+29. TELEMETRY OVERHEAD
+============================================================
+
+Measure the cost of observability.
+
+Potential measurements:
+- end-to-end latency,
+- CPU,
+- memory,
+- telemetry write time,
+- storage volume.
+
+Possible formula:
+
+overhead (%) =
+((AgentOps latency - baseline latency) / baseline latency) * 100
+
+Final methodology should be based on actual experiments.
+
+============================================================
+30. DETECTED FAILURE CLASSES
+============================================================
+
+Record whether each class can be detected.
+
+Example:
+
+Failure class             Detected?
+Retrieval failure         Yes/No
+Hallucination             Yes/No
+Timeout                   Yes/No
+Database failure          Yes/No
+Missing span              Yes/No
+Unsupported query         Yes/No
+Conflicting evidence     Yes/No
+
+============================================================
+31. CENTRAL CONTROLLED EXPERIMENT
+============================================================
+
+BASELINE:
+AgentOps OFF
+
+TREATMENT:
+AgentOps ON
+
+Same:
+- model,
+- model version,
+- prompt,
+- documents,
+- FAISS index,
+- retrieval configuration,
+- questions,
+- hardware,
+- software version,
+- experiment duration.
+
+Only change:
+AgentOps enabled/disabled.
+
+This is the most important experimental control.
+
+============================================================
+32. UPDATED IMPLEMENTATION ROADMAP
+============================================================
+
+PHASE 0 - LOCAL ENVIRONMENT
+- verify Python/Git,
+- install local runtime,
+- download Qwen,
+- run local prompt,
+- record model/runtime/version,
+- benchmark basic inference.
+
+PHASE 1 - PROJECT FOUNDATION + INSTRUMENTATION CONTRACT
+- repository,
+- environment,
+- configuration,
+- logging,
+- Session model,
+- Trace model,
+- Span model,
+- instrumentation interface,
+- AgentOps ON/OFF switch.
+
+PHASE 2 - ADMISSION KNOWLEDGE BASE
+- collect official documents,
+- parse,
+- clean,
+- chunk,
+- embed,
+- FAISS index,
+- metadata.
+
+PHASE 3 - BASELINE RAG AGENT
+- Streamlit,
+- FastAPI,
+- retrieval,
+- Qwen,
+- grounded answer,
+- source evidence.
+
+Instrumentation exists from the beginning, but the full monitoring backend can be added later.
+
+PHASE 4 - EXPLAINABILITY
+- evidence,
+- source,
+- confidence/relevance indicator,
+- concise explanation,
+- insufficient-evidence behavior.
+
+PHASE 5 - FULL AGENTOPS
+- spans,
+- MySQL,
+- metrics,
+- alerts,
+- Grafana.
+
+PHASE 6 - FAILURE INJECTION
+- failure taxonomy,
+- injection mechanisms,
+- ground truth,
+- alert verification.
+
+PHASE 7 - EVALUATION
+- Golden QA,
+- retrieval evaluation,
+- trace completeness,
+- alert precision/recall,
+- diagnosis time,
+- telemetry overhead,
+- detected failure classes.
+
+PHASE 8 - CONTROLLED COMPARISON
+Run AgentOps OFF and AgentOps ON with the same conditions.
+
+PHASE 9 - RESEARCH ANALYSIS
+- results,
+- unexpected findings,
+- limitations,
+- architecture revision,
+- proposal update,
+- research contribution,
+- paper preparation.
+
+============================================================
+33. IMPLEMENTATION DISCIPLINE
+============================================================
+
+Do not:
+- build dashboard before telemetry exists,
+- define final metrics after experiments,
+- create alerts without ground truth,
+- fine-tune before a strong RAG baseline,
+- claim explainability without defining user-visible evidence,
+- claim AgentOps value without an OFF baseline.
+
+Preferred order:
+
+Trace Contract
+    |
+Functional Agent
+    |
+Explainability
+    |
+Telemetry Storage
+    |
+Dashboard
+    |
+Failure Injection
+    |
+Evaluation
+    |
+Comparison
+    |
+Research Findings
+
+============================================================
+34. RESEARCH QUESTIONS
+============================================================
+
+Potential RQs:
+
+RQ1:
+How completely can a local admission-information agent be instrumented using an AgentOps-style trace model?
+
+RQ2:
+How accurately can the AgentOps layer detect and classify injected failures?
+
+RQ3:
+Does AgentOps reduce the time required to diagnose agent failures?
+
+RQ4:
+What telemetry overhead does AgentOps introduce?
+
+RQ5:
+Which classes of agent failures are observable through the proposed instrumentation?
+
+RQ6:
+Can user-facing evidence and explanation views improve transparency without exposing private model reasoning?
+
+These should be finalized after early implementation experiments.
+
+============================================================
+35. POTENTIAL HYPOTHESES
+============================================================
+
+H1:
+AgentOps increases trace completeness compared with a non-instrumented baseline.
+
+H2:
+AgentOps reduces operator diagnosis time for injected failures.
+
+H3:
+AgentOps detects a broader set of failure classes.
+
+H4:
+AgentOps introduces measurable but acceptable telemetry overhead.
+
+H5:
+Evidence-based explanations improve transparency without exposing internal model reasoning.
+
+These are hypotheses, not results.
+
+============================================================
+36. RESPONSIBLE AI REQUIREMENTS
+============================================================
+
+OPERATIONAL TRANSPARENCY:
+Operators can inspect execution.
+
+FAILURE DETECTION:
+Systematic detection of defined failures.
+
+PRIVACY-SAFE TELEMETRY:
+Do not collect unnecessary personal information.
+
+ACCOUNTABLE DEPLOYMENT:
+System behavior is inspectable and measurable.
+
+USER-FACING EXPLAINABILITY:
+Evidence and source information are visible to users.
+
+GROUNDING:
+Institution-specific claims are tied to documents.
+
+ABSTENTION:
+Insufficient evidence should lead to safe behavior.
+
+REPRODUCIBILITY:
+Experiments should be repeatable.
+
+============================================================
+37. PRIVACY-SAFE TELEMETRY
+============================================================
+
+Avoid storing:
+- student names,
+- phone numbers,
+- emails,
+- unnecessary personal information,
+- unnecessary sensitive admission information.
+
+Prefer:
+- anonymous session IDs,
+- trace IDs,
+- span IDs,
+- document IDs,
+- sanitized content where possible.
+
+Define:
+- what is collected,
+- why,
+- retention,
+- access control.
+
+============================================================
+38. USER VIEW VS OPERATOR VIEW
+============================================================
+
+USER:
+
+Answer
+|
++-- supporting evidence
++-- source
++-- confidence/relevance
++-- concise explanation
+
+OPERATOR:
+
+Session
+|
+Trace
+|
++-- retrieval span
++-- prompt span
++-- Qwen span
++-- explanation span
++-- errors
++-- metrics
++-- alerts
+
+Do not expose private chain-of-thought.
+
+============================================================
+39. EXPECTED DELIVERABLES
+============================================================
+
+Original required deliverables:
+1. Instrumented agent
+2. Monitoring dashboard
+3. Alert rules
+4. Failure injection tests
+5. Comparison report
+
+Additional working artifacts:
+6. Admission knowledge base
+7. Golden QA dataset
+8. Telemetry dataset
+9. Evaluation scripts
+10. Experiment configurations
+11. Research log
+12. Architecture documentation
+13. Final research analysis
+
+============================================================
+40. PROPOSAL DIRECTION
+============================================================
+
+The proposal is intentionally concise and reader-friendly.
+
+Major sections:
+1. Introduction / Executive Summary
+2. Problem / Motivation
+3. Literature Review and Research Gap
+4. Proposed System
+5. Technology Stack and Design Rationale
+6. Evaluation / Methodology
+7. Roadmap / Workflow
+8. Conclusion and References
+
+The proposal is a living document and will be updated after implementation evidence is available.
+
+============================================================
+41. LITERATURE-TO-DESIGN MAPPING
+============================================================
+
+Paper 1:
+AgentOps: Enabling Observability of LLM Agents
+
+Use for:
+- AgentOps concept,
+- observability,
+- entity relationships,
+- span representation,
+- what should be traced.
+
+Paper 2:
+A Taxonomy of AgentOps for Enabling Observability of Foundation Model based Agents
+
+Use for:
+- lifecycle artifacts,
+- prompt management,
+- planning,
+- memory,
+- guardrails,
+- evaluation,
+- tracing,
+- monitoring.
+
+Paper 3:
+Taming Uncertainty via Automation: Observing, Analysing and Optimising Agentic AI Systems
+
+Use for:
+- observe,
+- collect metrics,
+- detect issues,
+- identify root cause,
+- optimize,
+- automate.
+
+The literature review should answer:
+"What did we learn from each paper, and how did it affect our design?"
+
+============================================================
+42. CURRENT RESEARCH GAPS
+============================================================
+
+Working gaps:
+
+1. Domain-specific AgentOps implementation.
+2. Privacy-sensitive local deployment.
+3. User-facing explainability rather than operator-only observability.
+4. Controlled AgentOps ON/OFF comparison.
+5. Failure-oriented evaluation.
+6. Practical implementation of AgentOps concepts.
+
+Validate final research claims against the literature before publication.
+
+============================================================
+43. POTENTIAL CONTRIBUTION
+============================================================
+
+Do not claim to have invented AgentOps or explainability.
+
+The potential contribution is the integration and evaluation of:
+
+Local admission agent
++
+RAG
++
+AgentOps instrumentation
++
+User-facing explainability
++
+Failure injection
++
+Controlled ON/OFF comparison
++
+Quantitative AgentOps metrics
+
+The contribution must ultimately be supported by experimental evidence.
+
+============================================================
+44. TECHNOLOGY STACK
+============================================================
+
+Primary/planned:
+
+Frontend:
+Streamlit
+
+Backend:
+Python + FastAPI
+
+LLM:
+Qwen local
+
+Embeddings:
+Sentence Transformers
+
+Vector search:
+FAISS
+
+Database:
+MySQL
+
+Telemetry:
+OpenTelemetry-style local traces
+
+Monitoring:
+Grafana
+
+Containerization:
+Docker, where useful
+
+Alternative vector store:
+Chroma
+
+Potential runtimes:
+Ollama
+MLX
+llama.cpp
+Transformers
+LM Studio
+
+These are design choices, not immutable requirements.
+
+If experiments show another option is better, record:
+- what changed,
+- why,
+- evidence,
+- impact on proposal.
+
+============================================================
+45. DIAGRAMS REQUIRED
+============================================================
+
+At minimum:
+
+FIGURE 1:
+Overall System Architecture
+
+FIGURE 2:
+Knowledge Base Construction + RAG Pipeline
+
+FIGURE 3:
+AgentOps Trace Lifecycle
+
+FIGURE 4:
+Evaluation / Experimental Pipeline
+
+Optional:
+- Failure Injection Architecture
+- Explainability Flow
+- Dashboard Layout
+
+Figure 1:
+Student -> Streamlit -> FastAPI -> Functional AI pipeline.
+Orthogonal AgentOps path from components -> instrumentation -> telemetry -> MySQL -> Grafana/alerts.
+
+Figure 2:
+Documents -> cleaning -> chunking -> embeddings -> FAISS.
+Student query -> query embedding -> similarity search -> retrieved context -> Qwen -> explainability -> response.
+
+Figure 3:
+Session -> Trace -> spans:
+query, retrieval, prompt, generation, explanation, response.
+
+Figure 4:
+Same test set -> AgentOps OFF and AgentOps ON -> compare:
+trace completeness, alert precision/recall, diagnosis time, telemetry overhead, failure classes.
+
+============================================================
+46. DEVELOPMENT LOG REQUIREMENT
+============================================================
+
+For every meaningful technical change record:
+
+DATE
+COMPONENT
+CHANGE
+REASON
+ALTERNATIVES
+RESULT
+MEASUREMENT
+DECISION
+IMPACT ON PROPOSAL
+IMPACT ON RESEARCH QUESTION
+
+Examples:
+- changed vector store because of performance,
+- added retrieval span because diagnosis required it,
+- removed telemetry field because it contained unnecessary user data,
+- changed Qwen model because latency was too high.
+
+Do not rewrite history.
+
+============================================================
+47. VERSIONING
+============================================================
+
+Keep historical versions.
+
+Example:
+Proposal:
+V1 = ideation
+
+Implementation:
+V0 = skeleton
+V1 = baseline RAG
+V2 = instrumented
+V3 = evaluated
+
+If architecture changes:
+
+Original design
+    |
+Experimental observation
+    |
+Revised design
+    |
+Reason
+
+This is useful research evidence.
+
+============================================================
+48. FINE-TUNING STRATEGY
+============================================================
+
+Initial:
+NO fine-tuning.
+
+Start:
+Pretrained Qwen + RAG.
+
+Reasons:
+- cheaper,
+- faster,
+- easier to reproduce,
+- isolates AgentOps effects,
+- knowledge can be updated through documents,
+- avoids unnecessary model training.
+
+Possible future:
+LoRA / QLoRA.
+
+Only consider if:
+- RAG baseline has a demonstrated limitation,
+- enough high-quality domain data exists,
+- experiments justify it,
+- local hardware can support it.
+
+If fine-tuning is later tested, keep it as a separate experiment:
+
+RAG
+VS
+RAG + LoRA
+
+Do not mix this with AgentOps ON/OFF experiments.
+
+============================================================
+49. EXPERIMENTAL VARIABLE DISCIPLINE
+============================================================
+
+Never change multiple experimental variables at once.
+
+Bad:
+model changed + prompt changed + retrieval changed + AgentOps changed.
+
+Good:
+Experiment A:
+AgentOps OFF vs ON, everything else fixed.
+
+Experiment B:
+Retrieval configuration A vs B, AgentOps fixed.
+
+Experiment C:
+Qwen model A vs B, AgentOps fixed.
+
+Experiment D:
+RAG vs RAG + LoRA, AgentOps fixed.
+
+This is important for causal interpretation.
+
+============================================================
+50. MINIMUM VIABLE RESEARCH SYSTEM
+============================================================
+
+Before expanding:
+
+Student
+|
+Streamlit
+|
+FastAPI
+|
+FAISS
+|
+Qwen
+|
+evidence-backed response
+|
+instrumentation
+|
+trace
+|
+MySQL
+|
+Grafana
+
+Plus:
+AGENTOPS_ENABLED=true/false
+
+Then:
+- one dashboard,
+- a few alerts,
+- small failure suite,
+- small golden QA set.
+
+Scale only after this works.
+
+============================================================
+51. SUCCESS CRITERIA
+============================================================
+
+Success is NOT:
+"The chatbot answers questions."
+
+Success is:
+
+1. Agent runs locally.
+2. Responses are grounded in institutional documents.
+3. Evidence is visible.
+4. Important execution stages are traceable.
+5. Failures can be injected.
+6. Alerts detect defined conditions.
+7. Operators can diagnose failures through traces.
+8. AgentOps can be enabled/disabled.
+9. Comparison is quantitative.
+10. Telemetry overhead is measured.
+11. Privacy-safe telemetry is demonstrated.
+12. Results reveal strengths and limitations.
+
+============================================================
+52. IMPLEMENTATION-FIRST PRIORITY
+============================================================
+
+FIRST:
+Verify Qwen locally.
+
+Record exact model/runtime/version/hardware.
+
+SECOND:
+Create repository and environment.
+
+THIRD:
+Create trace/session/span contract and AgentOps ON/OFF interface.
+
+FOURTH:
+Build admission knowledge base.
+
+FIFTH:
+Build minimal RAG agent.
+
+SIXTH:
+Add evidence/explainability.
+
+SEVENTH:
+Add full AgentOps storage/dashboard/alerts.
+
+EIGHTH:
+Create failure injection suite.
+
+NINTH:
+Run controlled experiments.
+
+TENTH:
+Analyze results and update proposal.
+
+============================================================
+53. FINAL MENTAL MODEL FOR ANTIGRAVITY
+============================================================
+
+Think of the project as four layers:
+
+LAYER 1 - KNOWLEDGE
+Admission documents
+Embeddings
+FAISS
+Retrieval
+
+LAYER 2 - INTELLIGENCE
+Qwen
+Prompt construction
+Grounded generation
+
+LAYER 3 - TRUST
+Evidence
+Explainability
+Guardrails
+Abstention
+
+LAYER 4 - OPERATIONS
+Traces
+Metrics
+Alerts
+MySQL
+Grafana
+Evaluation
+
+Central experiment:
+
+What changes when Layer 4 is enabled?
+
+Keep Layers 1-3 as constant as possible.
+
+============================================================
+54. FINAL INSTRUCTION TO ANTIGRAVITY
+============================================================
+
+You are helping build a research-oriented Responsible AI system.
+
+Do not optimize only for a polished demo.
+
+Optimize for a system that can be:
+- measured,
+- challenged,
+- reproduced,
+- explained,
+- debugged,
+- evaluated.
+
+Before implementing major changes:
+1. inspect existing repository,
+2. identify current state,
+3. identify missing components,
+4. propose a minimal step,
+5. implement,
+6. run tests,
+7. report results,
+8. record architectural decisions.
+
+Do not overwrite existing work without checking it.
+
+Do not silently invent requirements.
+
+If something is uncertain, state the assumption and alternatives.
+
+Do not claim implementation until verified.
+
+Do not claim experimental improvement until measured.
+
+Do not expose private model chain-of-thought.
+
+Do not send institutional data to cloud LLM services for the core system.
+
+Keep AgentOps ON/OFF possible throughout development.
+
+Keep the baseline reproducible.
+
+When implementation reveals something unexpected, record it as a research observation.
+
+The desired final research story is:
+
+LITERATURE
+    |
+    v
+DESIGN PRINCIPLES
+    |
+    v
+LOCAL ADMISSION AGENT
+    |
+    v
+AGENTOPS-BY-DESIGN
+    |
+    v
+FAILURE INJECTION
+    |
+    v
+CONTROLLED ON/OFF EXPERIMENT
+    |
+    v
+QUANTITATIVE RESULTS
+    |
+    v
+RESEARCH FINDINGS
+    |
+    v
+RESPONSIBLE AI CONTRIBUTION
+
+END OF MASTER PROJECT CONTEXT

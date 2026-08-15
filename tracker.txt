@@ -1,0 +1,12 @@
+================================================================================
+AgentOps Project Tracker
+================================================================================
+This file tracks all facts, updates, and major architectural decisions made during development.
+
+[2026-08-15 12:38:00] INITIALIZATION
+- Initialized core project directory structure (/src, /data, /ui).
+- Defined Instrumentation-by-Design (Option 2) as the core architectural strategy.
+- Selected tech stack: Qwen (via Ollama), FAISS/Neo4j, FastAPI, MySQL, Streamlit, Grafana.
+- Verified local Qwen model (`qwen2.5-coder:latest`, 4.7 GB) is successfully installed on Apple Silicon (M2 Air) via Ollama.
+- Generated requirements.txt with all core dependencies.
+- Generated initial README.md.

@@ -1,0 +1,15 @@
+# Functional AI Pipeline
+fastapi==0.110.0
+uvicorn==0.29.0
+streamlit==1.32.2
+openai==1.14.3
+sentence-transformers==2.6.1
+faiss-cpu==1.8.0
+neo4j==5.18.0
+pydantic==2.6.4
+
+# AgentOps Pipeline
+mysql-connector-python==8.3.0
+opentelemetry-api==1.23.0
+opentelemetry-sdk==1.23.0
+python-dotenv==1.0.1
