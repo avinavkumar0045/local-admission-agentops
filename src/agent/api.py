@@ -4,7 +4,7 @@ Primary Responsibility: Exposes the HTTP endpoints for the admission assistant.
 Why it exists: To act as the entry point for frontend UIs, orchestrating the retriever, generator, and master traces.
 """
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 
@@ -29,7 +29,7 @@ class QueryResponse(BaseModel):
 @app.post("/query", response_model=QueryResponse)
 async def handle_query(request: QueryRequest):
     trace_id = str(uuid.uuid4())
-    trace_start = datetime.now()
+    trace_start = datetime.now(timezone.utc)
     
     try:
         # 1. Retrieve Context
@@ -47,7 +47,7 @@ async def handle_query(request: QueryRequest):
             trace_id=trace_id,
             span_type="full_query_lifecycle",
             start_time=trace_start,
-            end_time=datetime.now(),
+            end_time=datetime.now(timezone.utc),
             status="success",
             metadata={"query": request.query}
         )
@@ -64,7 +64,7 @@ async def handle_query(request: QueryRequest):
             trace_id=trace_id,
             span_type="full_query_lifecycle",
             start_time=trace_start,
-            end_time=datetime.now(),
+            end_time=datetime.now(timezone.utc),
             status="failure",
             error_msg=str(e),
             metadata={"query": request.query}
