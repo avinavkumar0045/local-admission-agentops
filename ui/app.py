@@ -11,7 +11,7 @@ import os
 st.set_page_config(
     page_title="Admission AgentOps",
     page_icon="🎓",
-    layout="centered"
+    layout="wide"
 )
 
 # --- Modular CSS Loading ---
