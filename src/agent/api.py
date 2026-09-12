@@ -92,6 +92,9 @@ async def handle_query(request: QueryRequest):
             )
             
         except Exception as e:
+            import traceback
+            traceback.print_exc()
+
             root_span.set_status(trace.Status(trace.StatusCode.ERROR))
             tracker.emit_span(
                 trace_id=trace_id,
