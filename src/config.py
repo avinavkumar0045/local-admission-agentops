@@ -1,15 +1,10 @@
-"""
-Configuration Module
-Primary Responsibility: Centralizes all environment variables and global settings.
-Why it exists: To ensure database credentials, LLM configuration, and the AgentOps toggle are easily manageable from one place.
-"""
 import os
 from dotenv import load_dotenv
 
 load_dotenv()
 
-# AgentOps Telemetry Toggle (The Core Experiment Control)
-AGENTOPS_ENABLED = os.getenv("AGENTOPS_ENABLED", "true").lower() == "true"
+# AgentOps Telemetry Toggle (EXPERIMENT B: ON)
+AGENTOPS_ENABLED = True
 
 # MySQL Database Config
 DB_HOST = os.getenv("DB_HOST", "localhost")
