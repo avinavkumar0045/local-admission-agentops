@@ -63,6 +63,42 @@ class TelemetryTracker:
             cursor.close()
         except: pass
 
+    def record_semantic_evaluation(self, trace_id, eval_data):
+        if not self.enabled or not self.conn: return
+        eval_id = str(uuid.uuid4())
+        self._ensure_trace_exists(trace_id)
+        try:
+            cursor = self.conn.cursor()
+            query = """
+                INSERT INTO semantic_evaluations 
+                (eval_id, trace_id, faithfulness, context_relevance, answer_relevance, hallucination_detected, grounding_status)
+                VALUES (%s, %s, %s, %s, %s, %s, %s)
+            """
+            cursor.execute(query, (
+                eval_id,
+                trace_id,
+                eval_data.get("faithfulness", 0.0),
+                eval_data.get("context_relevance", 0.0),
+                eval_data.get("answer_relevance", 0.0),
+                1 if eval_data.get("hallucination_detected") else 0,
+                eval_data.get("grounding_status", "UNKNOWN")
+            ))
+            cursor.close()
+        except: pass
+
+    def record_user_feedback(self, trace_id, rating, notes=None):
+        if not self.enabled or not self.conn: return
+        try:
+            cursor = self.conn.cursor()
+            query = """
+                UPDATE semantic_evaluations 
+                SET user_feedback = %s, feedback_notes = %s 
+                WHERE trace_id = %s
+            """
+            cursor.execute(query, (rating, notes, trace_id))
+            cursor.close()
+        except: pass
+
     def _ensure_trace_exists(self, trace_id):
         try:
             cursor = self.conn.cursor()

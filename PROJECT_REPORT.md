@@ -99,10 +99,12 @@ The methodology was to construct a real, functional AI agent for a real-world us
 - Run **Test B (AgentOps ON)**: Re-enable telemetry, trigger the same failure, observe the Grafana alert fire within 60 seconds and the Tempo waterfall highlight the exact failing span.
 - Compile results into a formal `AgentOps_Research_Paper.md`.
 
-### Phase 11 — LLMOps (Planned / Future) ⬜
-- Build a "Parent" evaluation harness with a Golden Dataset of question/answer pairs.
-- Automate regression testing of the agent using a Prompt Registry.
-- Compare model quality across versions using BLEU/ROUGE scores.
+### Phase 11 — Semantic Observability & Runtime RAG Triad Evaluation ✅
+- Implemented `SemanticEvaluator` (`src/agentops/evaluator.py`) to compute runtime RAG Triad metrics (Faithfulness, Context Relevance, Answer Relevance).
+- Upgraded the 11-step trace contract: enriched `grounding.validation` span with live `faithfulness_score`, `context_relevance`, `answer_relevance`, and `hallucination_detected` attributes.
+- Provisioned MySQL `semantic_evaluations` relational table and tied user feedback endpoint (`POST /feedback`).
+- Added Grafana dashboard panels: Average Faithfulness gauge, Hallucination Detection count, and real-time RAG Triad log table.
+- Added live semantic quality indicators to the Streamlit UI.
 
 ---
 
