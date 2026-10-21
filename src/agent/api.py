@@ -11,20 +11,28 @@ from opentelemetry import trace
 from src.agent.retriever import FAISSRetriever
 from src.agent.generator import LocalQwenGenerator
 from src.agentops.telemetry import tracer, tracker
+from src.agentops.evaluator import SemanticEvaluator
 from src.config import AGENTOPS_ENABLED
 
 app = FastAPI(title="AgentOps Admission API")
 
 retriever = FAISSRetriever()
 generator = LocalQwenGenerator()
+evaluator = SemanticEvaluator(embedding_model=retriever.model)
 
 class QueryRequest(BaseModel):
     query: str
+
+class FeedbackRequest(BaseModel):
+    trace_id: str
+    rating: int  # 1 for thumbs up, -1 for thumbs down
+    notes: str = None
 
 class QueryResponse(BaseModel):
     trace_id: str
     answer: str
     context: list
+    eval_metrics: dict = {}
 
 @app.post("/query", response_model=QueryResponse)
 async def handle_query(request: QueryRequest):
@@ -56,39 +64,56 @@ async def handle_query(request: QueryRequest):
                 trace_id=trace_id
             )
             
-            # 4. Grounding Validation
+            # 4. Grounding Validation & Semantic Evaluation (RAG Triad)
+            eval_metrics = evaluator.evaluate_rag_triad(
+                query=request.query,
+                context=context,
+                answer=answer
+            )
+
             with tracer.start_as_current_span("grounding.validation") as ground_span:
+                ground_span.set_attribute("faithfulness_score", eval_metrics["faithfulness"])
+                ground_span.set_attribute("context_relevance", eval_metrics["context_relevance"])
+                ground_span.set_attribute("answer_relevance", eval_metrics["answer_relevance"])
+                ground_span.set_attribute("hallucination_detected", eval_metrics["hallucination_detected"])
+                ground_span.set_attribute("grounding_status", eval_metrics["grounding_status"])
+
                 if not context:
                     ground_span.set_attribute("support_status", "UNSUPPORTED")
                     ground_span.set_status(trace.Status(trace.StatusCode.ERROR))
                 else:
                     ground_span.set_attribute("support_status", "SUPPORTED")
                     ground_span.set_attribute("evidence_score", context[0]['distance'])
-            
+                    if eval_metrics["hallucination_detected"]:
+                        ground_span.set_status(trace.Status(trace.StatusCode.ERROR, "Low faithfulness / Hallucination detected"))
+
             # 5. Explanation
             with tracer.start_as_current_span("explanation") as exp_span:
                 exp_span.set_attribute("evidence_count", len(context))
-                exp_span.set_attribute("confidence_indicator", "High" if context else "Low")
+                exp_span.set_attribute("confidence_indicator", "High" if eval_metrics["faithfulness"] >= 0.8 else ("Medium" if eval_metrics["faithfulness"] >= 0.5 else "Low"))
+                exp_span.set_attribute("grounding_verdict", eval_metrics["grounding_status"])
                 
             # 6. Response
             with tracer.start_as_current_span("response") as res_span:
                 res_span.set_attribute("response_status", "success")
-                res_span.set_attribute("abstained", False)
+                res_span.set_attribute("abstained", not bool(context))
 
-            # Keeping MySQL fallback for now
+            # Store in MySQL for Grafana and historical evaluation
+            tracker.record_semantic_evaluation(trace_id=trace_id, eval_data=eval_metrics)
             tracker.emit_span(
                 trace_id=trace_id,
                 span_type="full_query_lifecycle",
                 start_time=trace_start,
                 end_time=datetime.now(timezone.utc),
-                status="success",
-                metadata={"query": request.query}
+                status="success" if not eval_metrics["hallucination_detected"] else "degraded",
+                metadata={"query": request.query, "eval": eval_metrics}
             )
             
             return QueryResponse(
                 trace_id=trace_id,
                 answer=answer,
-                context=context 
+                context=context,
+                eval_metrics=eval_metrics
             )
             
         except Exception as e:
@@ -106,3 +131,15 @@ async def handle_query(request: QueryRequest):
                 metadata={"query": request.query}
             )
             raise HTTPException(status_code=500, detail="Internal Server Error during processing.")
+
+@app.post("/feedback")
+async def handle_feedback(request: FeedbackRequest):
+    """
+    Receives user feedback (thumbs up/down + notes) tied to a trace_id.
+    """
+    tracker.record_user_feedback(
+        trace_id=request.trace_id,
+        rating=request.rating,
+        notes=request.notes
+    )
+    return {"status": "success", "trace_id": request.trace_id, "rating": request.rating}

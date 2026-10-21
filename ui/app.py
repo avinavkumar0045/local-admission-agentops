@@ -32,7 +32,7 @@ if "messages" not in st.session_state:
     st.session_state.messages = []
 
 # --- Render Chat History ---
-for msg in st.session_state.messages:
+for msg_idx, msg in enumerate(st.session_state.messages):
     with st.chat_message(msg["role"]):
         st.markdown(msg["content"])
         if "context" in msg and msg["context"]:
@@ -41,6 +41,16 @@ for msg in st.session_state.messages:
                     st.markdown(f"**Source {idx+1}: {chunk['metadata']['source']}**")
                     st.caption(f"Relevance Distance: {chunk['distance']:.2f}")
                     st.write(chunk['content'])
+
+        # Display Semantic Quality Metrics if available
+        if msg.get("eval_metrics"):
+            m = msg["eval_metrics"]
+            st.caption(
+                f"🛡️ **AgentOps Semantic Verification:** "
+                f"Faithfulness: `{m.get('faithfulness', 0.0):.2f}` | "
+                f"Context Relevance: `{m.get('context_relevance', 0.0):.2f}` | "
+                f"Status: **{m.get('grounding_status', 'N/A')}**"
+            )
 
 # --- Chat Input & Backend Logic ---
 if prompt := st.chat_input("Ask a question about admissions (e.g., B.Tech eligibility)..."):
@@ -54,7 +64,7 @@ if prompt := st.chat_input("Ask a question about admissions (e.g., B.Tech eligib
     with st.chat_message("assistant"):
         with st.spinner("Analyzing admission policies..."):
             try:
-                # 120s timeout to match the backend Qwen processing limits
+                # 130s timeout to match the backend Qwen processing limits
                 response = httpx.post(
                     "http://127.0.0.1:8000/query", 
                     json={"query": prompt},
@@ -65,6 +75,8 @@ if prompt := st.chat_input("Ask a question about admissions (e.g., B.Tech eligib
                 
                 answer = data.get("answer", "No answer provided.")
                 context = data.get("context", [])
+                eval_metrics = data.get("eval_metrics", {})
+                trace_id = data.get("trace_id", "")
                 
                 st.markdown(answer)
                 if context:
@@ -73,11 +85,21 @@ if prompt := st.chat_input("Ask a question about admissions (e.g., B.Tech eligib
                             st.markdown(f"**Source {idx+1}: {chunk['metadata']['source']}**")
                             st.caption(f"Relevance Distance: {chunk['distance']:.2f}")
                             st.write(chunk['content'])
+                
+                if eval_metrics:
+                    st.caption(
+                        f"🛡️ **AgentOps Semantic Verification:** "
+                        f"Faithfulness: `{eval_metrics.get('faithfulness', 0.0):.2f}` | "
+                        f"Context Relevance: `{eval_metrics.get('context_relevance', 0.0):.2f}` | "
+                        f"Status: **{eval_metrics.get('grounding_status', 'N/A')}**"
+                    )
                             
                 st.session_state.messages.append({
                     "role": "assistant", 
                     "content": answer,
-                    "context": context
+                    "context": context,
+                    "eval_metrics": eval_metrics,
+                    "trace_id": trace_id
                 })
                 
             except httpx.ReadTimeout:
