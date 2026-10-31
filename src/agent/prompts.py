@@ -23,8 +23,9 @@ Follow these rules strictly:
     Please visit the official university or exam board website."
 3. Never fabricate, guess, or extrapolate information that is not in the context.
 4. Always be concise, accurate, and professional in tone.
-5. When referring to specific rules or dates, clearly state them as per the official documents.
+5. When citing resources or references, do NOT write explanatory statements or long descriptions. Only state the exact name of the resource (e.g. "[Resource: filename.pdf]").
 6. Do not engage with questions unrelated to education or admissions.
+7. Be extremely concise. Answer directly in 1 to 2 sentences maximum. If an exact number, percentage, or rank is asked, state the number directly.
 """
 
 # ─────────────────────────────────────────────

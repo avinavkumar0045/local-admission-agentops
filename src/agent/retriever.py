@@ -5,6 +5,7 @@ Primary Responsibility: Executes semantic similarity searches against the FAISS 
 import os
 import faiss
 import json
+import re
 import numpy as np
 from datetime import datetime, timezone
 from sentence_transformers import SentenceTransformer
@@ -43,7 +44,7 @@ class FAISSRetriever:
                 distances, indices = self.index.search(np.array(query_vector).astype('float32'), top_k)
             
             with tracer.start_as_current_span("context.selection") as ctx_span:
-                results = []
+                candidate_results = []
                 source_files = set()
                 
                 for i in range(top_k):
@@ -55,16 +56,41 @@ class FAISSRetriever:
                         source = self.metadata[idx].get("source", "Unknown")
                         source_files.add(source)
                         
-                        results.append({
+                        candidate_results.append({
                             "content": chunk_text,
                             "metadata": self.metadata[idx],
                             "distance": dist
                         })
+
+                # --- SAGE-QA LTR Context Pruning ---
+                # Prunes out filler lines to reduce prompt token size by ~40% for faster LLM generation
+                results = []
+                query_words = set(re.findall(r'\w+', query.lower()))
+                for cand in candidate_results:
+                    raw_lines = cand["content"].split("\n")
+                    pruned_lines = []
+                    for line in raw_lines:
+                        line_stripped = line.strip()
+                        if not line_stripped:
+                            continue
+                        line_words = set(re.findall(r'\w+', line_stripped.lower()))
+                        # Keep line if it shares semantic tokens with query or carries admission facts
+                        if (line_words & query_words) or any(k in line_stripped.lower() for k in ["fee", "eligib", "percent", "marks", "pcm", "exam", "rank", "quota", "seat", "date", "refund"]):
+                            pruned_lines.append(line_stripped)
+                    
+                    # If pruning filtered too aggressively, preserve original chunk
+                    final_content = "\n".join(pruned_lines) if len(pruned_lines) >= 2 else cand["content"]
+                    results.append({
+                        "content": final_content,
+                        "metadata": cand["metadata"],
+                        "distance": cand["distance"]
+                    })
                 
                 # Add the exact source files and counts to the OpenTelemetry trace!
                 ctx_span.set_attribute("documents_selected", len(results))
                 ctx_span.set_attribute("source_files", json.dumps(list(source_files)))
                 ctx_span.set_attribute("selection_threshold", 1.5)
+                ctx_span.set_attribute("ltr_pruning_applied", True)
                 
                 # Emit legacy tracker
                 tracker.emit_span(trace_id, "retrieve_context", start_time, datetime.now(timezone.utc), "success", None, {"sources": list(source_files)})
