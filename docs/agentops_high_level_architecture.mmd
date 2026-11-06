@@ -22,16 +22,17 @@
 flowchart LR
 
 %% ═══════════════════════════════════════════
-%%  A · USER INTERFACE & EXPLAINABILITY
+%%  A · USER INTERFACE & PRESENTATION
 %% ═══════════════════════════════════════════
 subgraph A["  A · User Interface & Presentation  "]
     direction TB
-    STUDENT(["👤 Student / User"])
-    STREAMLIT("🎓 Streamlit Web Application\n(Chat Interface)")
-    SOURCES("📄 Explainability Panel\n(Source Documents & Relevance Scores)")
+    n5(["Student / User"])
+    n2["Streamlit Web Application\n(Chat Interface)"]
+    n11["Explainability Panel\n(Source Documents & Relevance Scores)"]
     
-    STUDENT <-->|"Ask Query / Receive Answer"| STREAMLIT
-    STREAMLIT -->|"Displays Retrieved Citations"| SOURCES
+    n5 -->|Ask Query| n2
+    n2 -->|Receive Answer| n5
+    n2 -->|Displays Retrieved Citations| n11
 end
 
 %% ═══════════════════════════════════════════
@@ -39,10 +40,13 @@ end
 %% ═══════════════════════════════════════════
 subgraph B["  B · AI Application & Orchestration  "]
     direction TB
-    FASTAPI("⚙️ FastAPI Backend\n(Query Handler & Orchestrator)")
-    QWEN("🤖 Local Qwen 2.5 LLM\n(Ollama Runtime)")
+    n0["FastAPI Backend\n(Query Handler & Orchestrator)"]
+    n8["Local Qwen 2.5 LLM\n(Ollama Runtime)"]
+    n14["Structured Fast-Path Engine\n(42ms Deterministic Routing)"]
     
-    FASTAPI <-->|"Prompt with Context / Generated Answer"| QWEN
+    n0 -->|Prompt with Context| n8
+    n8 -->|Generated Answer| n0
+    n0 -->|Evaluate / Dispatch| n14
 end
 
 %% ═══════════════════════════════════════════
@@ -50,43 +54,46 @@ end
 %% ═══════════════════════════════════════════
 subgraph C["  C · Knowledge Base & Retrieval  "]
     direction TB
-    DOCS[/"📂 Admission Documents\n(PDFs, CSVs, Excel, Markdown)"/]
-    EMBED("🧮 Sentence Transformer\n(all-MiniLM-L6-v2 Embeddings)")
-    FAISS[("🗂️ FAISS Vector Index\n(991 Semantic Chunks)")]
+    n6[/"Admission Documents\n(PDFs, CSVs, Excel, Markdown)"/]
+    n4["Sentence Transformer\n(all-MiniLM-L6-v2 Embeddings)"]
+    n9[("FAISS Vector Index\n(1,176 Semantic Chunks)")]
     
-    DOCS -.->|"Offline Ingestion & Chunking"| EMBED
-    EMBED <-->|"Vector Search / Top-3 Chunks"| FAISS
+    n6 -.->|Offline Ingestion & Chunking| n4
+    n4 -->|Vector Search / Top-3 Chunks| n9
+    n9 -->|Relevant Context Passages| n4
 end
 
 %% ═══════════════════════════════════════════
-%%  D · AGENTOPS OBSERVABILITY & ALERTING
+%%  D · AGENTOPS OBSERVABILITY & MONITORING
 %% ═══════════════════════════════════════════
 subgraph D["  D · AgentOps Observability & Monitoring Layer  "]
     direction LR
-    OTEL("📡 OpenTelemetry SDK\n(11-Span Contract)")
-    COLLECTOR("🔁 OTel Collector\n(Docker:4317)")
-    TEMPO[("⏱️ Grafana Tempo\n(Distributed Traces)")]
-    MYSQL[("🗄️ MySQL Database\n(Span Metrics & Logs)")]
-    GRAFANA("📊 Grafana Dashboard\n& Alert Engine")
-    ALERTRX("🚨 Alert Receiver\n(Webhook:5050)")
+    n10["OpenTelemetry SDK\n(11-Span Contract & RAG-Triad)"]
+    n3["OTel Collector\n(Docker:4317)"]
+    n1[("Grafana Tempo\n(Distributed Traces)")]
+    n7[("MySQL Database\n(Span Metrics & Semantic Evals)")]
+    n12["Grafana Dashboard\n& Alert Engine"]
+    n13["Alert Receiver\n(Webhook:5050)"]
     
-    OTEL ==>|"OTLP / gRPC"| COLLECTOR
-    COLLECTOR ==>|"Trace Export"| TEMPO
-    TEMPO -->|"TraceQL Explorer"| GRAFANA
-    MYSQL -->|"SQL Metrics"| GRAFANA
-    GRAFANA -->|"Trigger on Failure"| ALERTRX
+    n10 -->|OTLP / gRPC| n3
+    n3 -->|Trace Export| n1
+    n1 -->|TraceQL Explorer| n12
+    n7 -->|SQL Metrics & Evals| n12
+    n12 -->|Trigger on Failure| n13
 end
 
 %% ═══════════════════════════════════════════
-%%  PRIMARY INTER-MODULE CONNECTIONS
+%%  PRIMARY INTER-MODULE DATAFLOW (DUAL-DIRECTIONAL)
 %% ═══════════════════════════════════════════
-STREAMLIT <==>|"HTTP POST /query  &  JSON Response"| FASTAPI
+n2 -->|HTTP POST /query| n0
+n0 -->|JSON Response & Citations| n2
 
-FASTAPI <==>|"Semantic Query / Retrieved Context"| EMBED
+n0 -->|Semantic Query| n4
+n4 -->|Pruned Chunks / Evidence| n0
 
 %% Telemetry Stream (Application to Observability)
-FASTAPI ==>|"Telemetry Spans"| OTEL
-FASTAPI ==>|"SQL INSERT Span Records"| MYSQL
+n0 -->|Telemetry Spans| n10
+n0 -->|SQL INSERT Span Records & Evals| n7
 
 %% ═══════════════════════════════════════════
 %%  NODE STYLING
@@ -101,13 +108,12 @@ classDef explain  fill:#2a1a3a,stroke:#5a2a7a,color:#d8b8f0,font-weight:bold
 classDef otel     fill:#1a2a3d,stroke:#2a5a8a,color:#b8d0f0,font-weight:bold
 classDef alert    fill:#3d1a1a,stroke:#8a2a2a,color:#f0b8b8,font-weight:bold
 
-class STUDENT person
-class STREAMLIT ui
-class SOURCES explain
-class FASTAPI app
-class QWEN ai
-class EMBED ai
-class FAISS,MYSQL,TEMPO storage
-class DOCS docs
-class OTEL,COLLECTOR,GRAFANA otel
-class ALERTRX alert
+class n5 person
+class n2 ui
+class n11 explain
+class n0,n14 app
+class n8,n4 ai
+class n9,n7,n1 storage
+class n6 docs
+class n10,n3,n12 otel
+class n13 alert

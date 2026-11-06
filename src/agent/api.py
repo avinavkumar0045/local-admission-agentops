@@ -11,6 +11,7 @@ from opentelemetry import trace
 from src.agent.retriever import FAISSRetriever
 from src.agent.generator import LocalQwenGenerator
 from src.agent.fast_path import StructuredFastPathEngine
+from src.agent.normalizer import QueryNormalizer
 from src.agentops.telemetry import tracer, tracker
 from src.agentops.evaluator import SemanticEvaluator
 from src.config import AGENTOPS_ENABLED
@@ -20,6 +21,7 @@ app = FastAPI(title="AgentOps Admission API")
 retriever = FAISSRetriever()
 generator = LocalQwenGenerator()
 fast_engine = StructuredFastPathEngine()
+normalizer = QueryNormalizer()
 evaluator = SemanticEvaluator(embedding_model=retriever.model)
 
 class QueryRequest(BaseModel):
@@ -54,10 +56,24 @@ async def handle_query(request: QueryRequest):
                 raise HTTPException(status_code=400, detail="Empty query")
             val_span.set_attribute("classification", "VALID")
             
+            # --- Heliyon Algorithm 1 & Normalization ---
+            # Corrects typos (e.g. 'fess' -> 'fees') and maps domain synonyms in < 1ms
+            normalized_query, norm_meta = normalizer.normalize(request.query)
+            val_span.set_attribute("query.raw", request.query)
+            val_span.set_attribute("query.normalized", normalized_query)
+            val_span.set_attribute("query.corrected", norm_meta["modified"])
+            val_span.set_attribute("query.norm_latency_ms", norm_meta["latency_ms"])
+            if norm_meta["corrections"]:
+                import json
+                val_span.set_attribute("query.typos_fixed", json.dumps(norm_meta["corrections"]))
+            if norm_meta["synonyms_applied"]:
+                import json
+                val_span.set_attribute("query.synonyms_applied", json.dumps(norm_meta["synonyms_applied"]))
+            
         try:
             # 0. SAGE-QA / Heliyon Fast-Path Deterministic Check
             # Sub-100ms bypass for structured queries (Counts, Entity Verification)
-            fast_res = fast_engine.try_fast_query(request.query)
+            fast_res = fast_engine.try_fast_query(normalized_query)
             if fast_res:
                 fast_answer, fast_meta = fast_res
                 with tracer.start_as_current_span("fast_path.execution") as fp_span:
@@ -80,7 +96,7 @@ async def handle_query(request: QueryRequest):
                     start_time=trace_start,
                     end_time=datetime.now(timezone.utc),
                     status="success",
-                    metadata={"query": request.query, "fast_path": True, "eval": eval_metrics}
+                    metadata={"query": request.query, "normalized_query": normalized_query, "fast_path": True, "eval": eval_metrics}
                 )
                 
                 return QueryResponse(
@@ -90,20 +106,20 @@ async def handle_query(request: QueryRequest):
                     eval_metrics=eval_metrics
                 )
 
-            # 1. Retrieve Context (with SAGE-QA LTR pruning)
-            context = retriever.retrieve(query=request.query, trace_id=trace_id)
+            # 1. Retrieve Context (with SAGE-QA LTR pruning on normalized query)
+            context = retriever.retrieve(query=normalized_query, trace_id=trace_id)
             
             # 2. Prompt Construction is embedded in generator, but we can capture it here virtually or in generator.
             # 3. Generate Answer
             answer = await generator.generate_response(
-                query=request.query, 
+                query=normalized_query, 
                 context=context, 
                 trace_id=trace_id
             )
             
             # 4. Grounding Validation & Semantic Evaluation (RAG Triad)
             eval_metrics = evaluator.evaluate_rag_triad(
-                query=request.query,
+                query=normalized_query,
                 context=context,
                 answer=answer
             )

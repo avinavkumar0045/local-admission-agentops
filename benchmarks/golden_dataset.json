@@ -1,0 +1,122 @@
+[
+  {
+    "id": "Q01",
+    "query": "What is the tuition fee concession under Founder Scholarship for SRMJEEE rank 1 to 100?",
+    "target_source": "srmist-scholarship-categories.pdf",
+    "relevant_keywords": ["founder", "srmjeee", "1-100", "100%", "tuition"]
+  },
+  {
+    "id": "Q02",
+    "query": "What is the maximum IIT JEE Mains rank eligible for the Founder Scholarship at SRMIST?",
+    "target_source": "srmist-scholarship-categories.pdf",
+    "relevant_keywords": ["founder", "jee (mains)", "2000", "rank"]
+  },
+  {
+    "id": "Q03",
+    "query": "What is the annual tuition fee for B.Tech in Computer Science and Engineering at Kattankulathur KTR campus?",
+    "target_source": "srmist_course_fee_structure.pdf",
+    "relevant_keywords": ["computer science", "kattankulathur", "4,75,000", "tuition"]
+  },
+  {
+    "id": "Q04",
+    "query": "What is the annual tuition fee for B.Tech CSE at Ramapuram campus?",
+    "target_source": "srmist_course_fee_structure.pdf",
+    "relevant_keywords": ["ramapuram", "3,50,000", "computer science"]
+  },
+  {
+    "id": "Q05",
+    "query": "What is the minimum aggregate percentage in 10+2 required for B.Tech Computer Science eligibility?",
+    "target_source": "eligibility.md",
+    "relevant_keywords": ["75%", "10+2", "computer science", "physics", "mathematics"]
+  },
+  {
+    "id": "Q06",
+    "query": "What is the minimum graduation percentage required for MBA admission eligibility?",
+    "target_source": "eligibility.md",
+    "relevant_keywords": ["mba", "bachelor", "60%", "aggregate"]
+  },
+  {
+    "id": "Q07",
+    "query": "What is the reservation percentage for OBC candidates in university admissions?",
+    "target_source": "eligibility.md",
+    "relevant_keywords": ["27%", "obc", "reservation"]
+  },
+  {
+    "id": "Q08",
+    "query": "What is the reservation percentage for SC and ST candidates?",
+    "target_source": "eligibility.md",
+    "relevant_keywords": ["15%", "7.5%", "sc", "st"]
+  },
+  {
+    "id": "Q09",
+    "query": "What is the refundable caution deposit amount for B.Tech programs?",
+    "target_source": "fees.md",
+    "relevant_keywords": ["caution deposit", "$300", "refundable"]
+  },
+  {
+    "id": "Q10",
+    "query": "What is the optional hostel fee per semester for B.Tech students?",
+    "target_source": "fees.md",
+    "relevant_keywords": ["hostel fee", "$1,200", "semester"]
+  },
+  {
+    "id": "Q11",
+    "query": "What is the tuition fee per semester for the MBA program?",
+    "target_source": "fees.md",
+    "relevant_keywords": ["mba", "tuition fee", "$8,000"]
+  },
+  {
+    "id": "Q12",
+    "query": "What is the merit scholarship criteria for the top 5 percent entrance exam rank holders?",
+    "target_source": "fees.md",
+    "relevant_keywords": ["top 5%", "50% waiver", "merit scholarship"]
+  },
+  {
+    "id": "Q13",
+    "query": "What is the annual family income threshold to qualify for need-based financial aid?",
+    "target_source": "fees.md",
+    "relevant_keywords": ["financial aid", "family income", "$10,000"]
+  },
+  {
+    "id": "Q14",
+    "query": "What are the rules and regulations governing B.Tech and M.Tech integrated programs at SRMIST FET?",
+    "target_source": "srmist-fet-btech-mtech-integrated-regulations-2026.pdf",
+    "relevant_keywords": ["regulations", "fet", "b.tech", "m.tech"]
+  },
+  {
+    "id": "Q15",
+    "query": "When are online applications for the award of scholarships opened every year at SRMIST?",
+    "target_source": "srmist-scholarship-categories.pdf",
+    "relevant_keywords": ["scholarships", "july", "committee", "awardees"]
+  },
+  {
+    "id": "Q16",
+    "query": "What is the concession on tuition fee under Differently Abled Scholarship?",
+    "target_source": "srmist-scholarship-categories.pdf",
+    "relevant_keywords": ["differently abled", "scholarship", "concession"]
+  },
+  {
+    "id": "Q17",
+    "query": "What is the total caution deposit payable at admission for MBA?",
+    "target_source": "fees.md",
+    "relevant_keywords": ["caution deposit", "$500", "mba"]
+  },
+  {
+    "id": "Q18",
+    "query": "What entrance exam scores are accepted for MBA admission?",
+    "target_source": "eligibility.md",
+    "relevant_keywords": ["cat", "mat", "xat", "mba"]
+  },
+  {
+    "id": "Q19",
+    "query": "What is the application deadline for B.Tech Computer Science admissions?",
+    "target_source": "eligibility.md",
+    "relevant_keywords": ["may 15", "deadline", "application"]
+  },
+  {
+    "id": "Q20",
+    "query": "What is the application deadline for MBA admissions?",
+    "target_source": "eligibility.md",
+    "relevant_keywords": ["june 30", "deadline", "mba"]
+  }
+]
