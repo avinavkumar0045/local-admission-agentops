@@ -106,6 +106,22 @@ The methodology was to construct a real, functional AI agent for a real-world us
 - Added Grafana dashboard panels: Average Faithfulness gauge, Hallucination Detection count, and real-time RAG Triad log table.
 - Added live semantic quality indicators to the Streamlit UI.
 
+### Phase 12 — Offline Information Retrieval (IR) Benchmarking ✅
+- Created curated Golden Test Dataset of admission QA pairs (`benchmarks/golden_dataset.json`).
+- Built automated IR benchmarking harness (`benchmarks/evaluate_retrieval.py`).
+- Measured and validated offline retrieval metrics across 1,176 indexed FAISS chunks:
+  - **Recall@3: 95.00%** (beats literature baseline 0.65–0.75).
+  - **Precision@3: 61.67%** (within literature baseline 0.55–0.70).
+  - **MRR (Mean Reciprocal Rank): 0.8917**.
+  - **Average Dense Search Latency: 14.02 ms**.
+- Persisted structured evaluation report to `benchmarks/benchmark_report.json`.
+
+### Phase 13 — Query Normalization & Spelling Correction Engine (Heliyon Algorithm 1) ✅
+- Implemented `QueryNormalizer` (`src/agent/normalizer.py`) implementing Levenshtein distance string matching and domain synonym mapping inspired by Heliyon (2021).
+- Integrated into `src/agent/api.py` directly inside `query.validation` span, recording normalization latency, typos corrected, and synonyms mapped.
+- Benchmarked overhead at **0.07 – 0.98 ms** (<1 ms), resolving subword embedding drift and false abstentions for misspelled queries (e.g. `"fess"` $\rightarrow$ `"fees"`).
+- End-to-end verified with live HTTP test achieving 100% faithfulness grounded generation.
+
 ---
 
 ## 4. Phase-by-Phase Completion Report

@@ -1,0 +1,25 @@
+{
+  "benchmark_dataset_size": 20,
+  "total_indexed_chunks": 1176,
+  "results": {
+    "top_1": {
+      "hit_rate_recall": 0.85,
+      "precision": 0.85,
+      "mrr": 0.85,
+      "avg_latency_ms": 59.48
+    },
+    "top_3": {
+      "hit_rate_recall": 0.95,
+      "precision": 0.6167,
+      "mrr": 0.8917,
+      "avg_latency_ms": 14.02
+    },
+    "top_5": {
+      "hit_rate_recall": 0.95,
+      "precision": 0.46,
+      "mrr": 0.8917,
+      "avg_latency_ms": 14.11
+    }
+  },
+  "evaluation_timestamp": "2026-11-04 20:47:34"
+}

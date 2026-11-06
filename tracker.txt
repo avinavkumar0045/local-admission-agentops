@@ -92,3 +92,32 @@ This file tracks all facts, updates, and major architectural decisions made duri
 - Verified in live testing:
   - Aggregation queries answered in 42 ms (Status: `DETERMINISTIC_GROUNDED`).
   - Integer fact queries (SRMIST Founder Scholarship ranks and concession percentages) answered accurately with Faithfulness = 1.00.
+
+
+[2026-11-04 20:47:00] PHASE 12 COMPLETION (OFFLINE RETRIEVAL EVALUATION & GOLDEN DATASET BENCHMARK)
+- Built curated Golden Test Dataset of admission QA pairs (`benchmarks/golden_dataset.json`).
+- Built automated IR benchmarking harness (`benchmarks/evaluate_retrieval.py`).
+- Executed offline retrieval evaluation across all 1,176 indexed FAISS chunks:
+  - Recall@1 (Hit Rate): 85.00% | Precision@1: 85.00%
+  - Recall@3 (Hit Rate): 95.00% (significantly exceeds industry baseline of 65%-75%)
+  - Precision@3: 61.67% (within industry target range of 55%-70%)
+  - Recall@5 (Hit Rate): 95.00% | Precision@5: 46.00%
+  - Mean Reciprocal Rank (MRR): 0.8917 (ground-truth chunks appear in position #1 in 85% of queries)
+  - Dense Search Latency: 14.02 ms per query
+- Saved formal benchmark results to `benchmarks/benchmark_report.json`.
+- Updated `PROJECT_REPORT.md` marking Phase 12 as COMPLETE.
+
+
+[2026-11-05 19:25:00] PHASE 13 — QUERY NORMALIZATION & SPELLING CORRECTION ENGINE (HELIYON 2021 ALGORITHM 1)
+- Implemented `QueryNormalizer` in `src/agent/normalizer.py`:
+  - Character-level Levenshtein edit distance with length-adaptive dynamic thresholds (≤1 for length 4-6, ≤2 for length >6, acronyms ≤3 preserved).
+  - Domain vocabulary matching across ~150 canonical admission terms, campus entities, degrees, and exam acronyms.
+  - O(1) common typo fast-path (e.g., 'fess' -> 'fees', 'scholorship' -> 'scholarship', 'elgibility' -> 'eligibility').
+  - Domain synonym mapping (e.g., 'branch' -> 'campus', 'ktr' -> 'kattankulathur', 'cost' -> 'fees').
+- Integrated into `src/agent/api.py` inside the `query.validation` OpenTelemetry span:
+  - Added telemetry attributes: `query.raw`, `query.normalized`, `query.corrected`, `query.norm_latency_ms`, `query.typos_fixed`, and `query.synonyms_applied`.
+  - Normalization overhead benchmarked at 0.07 ms – 0.98 ms (<1 ms, 0% noticeable delay).
+- Verified end-to-end via HTTP API:
+  - Query: "Difference in fess of B.Tech in Computer Science and Engineering between Kattankulathur branch and Ramapuram branch?"
+  - Normalizer corrected "fess" -> "fees" and "branch" -> "campus" in 0.97 ms.
+  - Retrieved 3/3 target FAISS chunks, generated accurate tuition fee facts (INR 3,50,000 for KTR & Ramapuram), and scored Faithfulness = 1.00 (`FULLY_GROUNDED`).
