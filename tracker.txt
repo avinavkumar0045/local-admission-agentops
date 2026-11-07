@@ -121,3 +121,12 @@ This file tracks all facts, updates, and major architectural decisions made duri
   - Query: "Difference in fess of B.Tech in Computer Science and Engineering between Kattankulathur branch and Ramapuram branch?"
   - Normalizer corrected "fess" -> "fees" and "branch" -> "campus" in 0.97 ms.
   - Retrieved 3/3 target FAISS chunks, generated accurate tuition fee facts (INR 3,50,000 for KTR & Ramapuram), and scored Faithfulness = 1.00 (`FULLY_GROUNDED`).
+
+
+[2026-11-07] PHASE 14 — ADMISSION ASSISTANT UI UPDATES
+
+- Updated the Streamlit frontend in ui/app.py with the revised Admission Assistant interface.
+
+- Redesigned and updated ui/styles.css to implement the new UI styling.
+
+- Added ui/srm_campus.jpg as a new visual asset for the interface.
