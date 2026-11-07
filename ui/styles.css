@@ -1,65 +1,491 @@
-/* Glassmorphic Black Theme */
-/* This file exists to keep the UI theme strictly modular and separated from logic */
+/* ==========================================================================
+   Admission Assistant — Clear Backdrop Theme with Visible SRM Campus Gate
+   ========================================================================== */
 
-/* Make the entire chat interface much wider */
-.main .block-container {
-    max-width: 1100px !important;
-    padding-top: 3rem !important;
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+:root {
+    --accent-violet: #A78BFA;
+    --accent-indigo: #6366F1;
+    --glass-border: rgba(255, 255, 255, 0.1);
+    --text-primary: #FFFFFF;
+    --text-secondary: #94A3B8;
+    --text-muted: #64748B;
+    --radius-sm: 8px;
+    --radius-md: 14px;
+    --radius-lg: 20px;
 }
 
-/* Main App Background */
-.stApp {
-    background: radial-gradient(circle at top left, #1a1a1a, #050505);
-    color: #f1f1f1;
-    font-family: 'Inter', 'Roboto', sans-serif;
-}
-
-/* General Chat Message styling */
-.stChatMessage {
-    background: rgba(30, 30, 30, 0.4) !important;
-    backdrop-filter: blur(12px) !important;
-    -webkit-backdrop-filter: blur(12px) !important;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 12px;
-    padding: 15px;
-    margin-bottom: 12px;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6);
-}
-
-/* User Message specific coloring */
-.stChatMessage:nth-child(odd) {
-    background: rgba(45, 100, 250, 0.1) !important;
-    border: 1px solid rgba(45, 100, 250, 0.2);
-}
-
-/* Chat Input Bar */
-.stChatInputContainer {
-    background: rgba(255, 255, 255, 0.8) !important;
-    backdrop-filter: blur(15px) !important;
-    border: 1px solid rgba(255, 255, 255, 0.5) !important;
-    border-radius: 20px !important;
-}
-.stChatInputContainer textarea, .stChatInputContainer input, .stChatInputContainer p, .stChatInputContainer div {
-    color: #000000 !important;
-    -webkit-text-fill-color: #000000 !important;
-}
-
-/* Explainability Expander */
-.streamlit-expanderHeader {
+/* --- Fullscreen Transparent Base --- */
+.stApp,
+[data-testid="stAppViewContainer"],
+[data-testid="stHeader"],
+.main {
+    background: transparent !important;
     background-color: transparent !important;
-    color: #cccccc !important;
-    font-size: 2.0em !important;
+    color: var(--text-primary) !important;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important;
 }
+
+/* Fixed SRM Campus Background — Gate is clearly visible with light blur & balanced dark overlay */
+.srm-fixed-background {
+    position: fixed;
+    top: -20px;
+    left: -20px;
+    width: calc(100vw + 40px);
+    height: calc(100vh + 40px);
+    background-size: cover;
+    background-position: center center;
+    background-repeat: no-repeat;
+    filter: blur(3.5px) brightness(0.82);
+    -webkit-filter: blur(3.5px) brightness(0.82);
+    transform: scale(1.03);
+    z-index: 0;
+    pointer-events: none;
+}
+
+/* Main Container */
+.main .block-container {
+    max-width: 880px !important;
+    padding-top: 1.5rem !important;
+    padding-bottom: 7rem !important;
+    position: relative;
+    z-index: 1;
+}
+
+header[data-testid="stHeader"] {
+    background: transparent !important;
+}
+
+/* --- Glassmorphic Sidebar --- */
+section[data-testid="stSidebar"] {
+    background-color: rgba(10, 14, 26, 0.78) !important;
+    backdrop-filter: blur(20px) saturate(160%) !important;
+    -webkit-backdrop-filter: blur(20px) saturate(160%) !important;
+    border-right: 1px solid var(--glass-border) !important;
+    box-shadow: 6px 0 28px rgba(0, 0, 0, 0.5) !important;
+    position: relative;
+    z-index: 2;
+}
+
+section[data-testid="stSidebar"] .block-container {
+    padding-top: 1.5rem !important;
+    padding-left: 1.1rem !important;
+    padding-right: 1.1rem !important;
+}
+
+/* Sidebar Top Brand */
+.sidebar-brand-container {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 0.2rem 0 1.2rem 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    margin-bottom: 1.2rem;
+}
+
+.brand-cap-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--accent-violet);
+}
+
+.brand-title {
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: #FFFFFF;
+    letter-spacing: -0.01em;
+}
+
+/* "+ New Chat" Button */
+.new-chat-wrapper button {
+    width: 100% !important;
+    background: rgba(36, 32, 58, 0.8) !important;
+    backdrop-filter: blur(12px) !important;
+    border: 1px solid rgba(167, 139, 250, 0.35) !important;
+    border-radius: var(--radius-md) !important;
+    color: #FFFFFF !important;
+    font-weight: 600 !important;
+    font-size: 0.9rem !important;
+    padding: 0.65rem 1rem !important;
+    text-align: left !important;
+    justify-content: flex-start !important;
+    margin-bottom: 1.2rem !important;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3) !important;
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+.new-chat-wrapper button:hover {
+    background: rgba(52, 44, 84, 0.9) !important;
+    border-color: rgba(167, 139, 250, 0.6) !important;
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px rgba(99, 102, 241, 0.3) !important;
+}
+
+/* Sidebar Search Box */
+div[data-testid="stSidebar"] div[data-testid="stTextInput"] input {
+    background: rgba(14, 18, 34, 0.7) !important;
+    backdrop-filter: blur(10px) !important;
+    border: 1px solid var(--glass-border) !important;
+    border-radius: var(--radius-sm) !important;
+    color: var(--text-primary) !important;
+    font-size: 0.82rem !important;
+    padding: 0.5rem 0.8rem !important;
+    margin-bottom: 0.8rem !important;
+}
+
+div[data-testid="stSidebar"] div[data-testid="stTextInput"] input:focus {
+    border-color: var(--accent-violet) !important;
+    box-shadow: 0 0 0 2px rgba(167, 139, 250, 0.25) !important;
+}
+
+/* "YOUR HISTORY" Header */
+.history-section-label {
+    font-size: 0.74rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    color: #94A3B8;
+    text-transform: uppercase;
+    margin: 1.2rem 0 0.5rem 0.2rem;
+}
+
+/* History Items */
+.history-item-btn button {
+    width: 100% !important;
+    background: transparent !important;
+    border: 1px solid transparent !important;
+    color: #CBD5E1 !important;
+    border-radius: var(--radius-sm) !important;
+    font-size: 0.85rem !important;
+    font-weight: 400 !important;
+    padding: 0.45rem 0.65rem !important;
+    text-align: left !important;
+    justify-content: flex-start !important;
+    margin-bottom: 0.25rem !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+    transition: all 0.15s ease !important;
+}
+
+.history-item-btn button:hover {
+    background: rgba(255, 255, 255, 0.08) !important;
+    border-color: rgba(255, 255, 255, 0.1) !important;
+    color: #FFFFFF !important;
+}
+
+.history-item-btn.active button {
+    background: rgba(99, 102, 241, 0.25) !important;
+    border-color: rgba(167, 139, 250, 0.4) !important;
+    color: #FFFFFF !important;
+    font-weight: 500 !important;
+}
+
+/* --- Clear, Non-Obstructive Hero Welcome (Gate is fully visible) --- */
+.hero-clear-container {
+    text-align: center;
+    padding: 4.5rem 1rem 2rem 1rem;
+    margin: 0 auto;
+    max-width: 720px;
+}
+
+.hero-cap-svg {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 58px;
+    height: 58px;
+    background: rgba(15, 20, 38, 0.65);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    border: 1px solid rgba(167, 139, 250, 0.4);
+    border-radius: 50%;
+    margin-bottom: 1.2rem;
+    color: var(--accent-violet);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+}
+
+.hero-heading {
+    font-size: 2.15rem !important;
+    font-weight: 700 !important;
+    color: #FFFFFF !important;
+    margin: 0 0 0.7rem 0 !important;
+    letter-spacing: -0.02em;
+    line-height: 1.25 !important;
+    text-shadow: 0 3px 16px rgba(0, 0, 0, 0.95), 0 1px 4px rgba(0, 0, 0, 0.85);
+}
+
+.hero-subheading {
+    font-size: 1.02rem !important;
+    color: #E2E8F0 !important;
+    line-height: 1.65 !important;
+    max-width: 620px;
+    margin: 0 auto !important;
+    text-shadow: 0 2px 12px rgba(0, 0, 0, 0.9), 0 1px 3px rgba(0, 0, 0, 0.8);
+}
+
+/* --- Active Conversation Header --- */
+.active-chat-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.75rem 1.2rem;
+    background: rgba(14, 18, 32, 0.7);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-md);
+    margin-bottom: 1.4rem;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+}
+
+.status-indicator {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(16, 185, 129, 0.15);
+    color: #34D399;
+    border: 1px solid rgba(16, 185, 129, 0.3);
+    border-radius: 9999px;
+    padding: 3px 9px;
+    font-size: 0.72rem;
+    font-weight: 500;
+}
+
+/* --- Chat Messages --- */
+.stChatMessage {
+    background: transparent !important;
+    border: none !important;
+    padding: 0.4rem 0 !important;
+    margin-bottom: 0.8rem !important;
+    box-shadow: none !important;
+}
+
+/* User Message Row - Align to the Right Side */
+div[data-testid="stChatMessage"]:has([data-testid="stChatMessageAvatarUser"]),
+div[data-testid="stChatMessage"]:has(.user-glass-bubble) {
+    display: flex !important;
+    flex-direction: row-reverse !important;
+    justify-content: flex-start !important;
+    align-items: flex-start !important;
+    margin-left: auto !important;
+    margin-right: 0 !important;
+    max-width: 80% !important;
+    width: fit-content !important;
+    margin-bottom: 1.1rem !important;
+}
+
+/* User Message Avatar */
+div[data-testid="stChatMessage"]:has([data-testid="stChatMessageAvatarUser"]) [data-testid="stChatMessageAvatarUser"],
+div[data-testid="stChatMessage"]:has(.user-glass-bubble) [data-testid="stChatMessageAvatarUser"] {
+    margin-left: 10px !important;
+    margin-right: 0 !important;
+    background: rgba(30, 100, 180, 0.45) !important;
+    border: 1px solid rgba(96, 165, 250, 0.5) !important;
+    border-radius: 50% !important;
+    width: 34px !important;
+    height: 34px !important;
+    backdrop-filter: blur(8px) !important;
+}
+
+/* User Message Glass Bubble Content */
+div[data-testid="stChatMessage"]:has([data-testid="stChatMessageAvatarUser"]) [data-testid="stChatMessageContent"],
+div[data-testid="stChatMessage"]:has(.user-glass-bubble) [data-testid="stChatMessageContent"] {
+    background: rgba(30, 100, 180, 0.35) !important;
+    backdrop-filter: blur(14px) saturate(160%) !important;
+    -webkit-backdrop-filter: blur(14px) saturate(160%) !important;
+    border: 1px solid rgba(96, 165, 250, 0.45) !important;
+    border-radius: 18px 18px 4px 18px !important;
+    padding: 0.85rem 1.25rem !important;
+    color: #FFFFFF !important;
+    width: fit-content !important;
+    max-width: 100% !important;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35), 0 0 14px rgba(30, 100, 180, 0.25) !important;
+    word-wrap: break-word !important;
+    overflow-wrap: break-word !important;
+    white-space: pre-wrap !important;
+}
+
+div[data-testid="stChatMessage"]:has([data-testid="stChatMessageAvatarUser"]) [data-testid="stChatMessageContent"] p,
+div[data-testid="stChatMessage"]:has(.user-glass-bubble) [data-testid="stChatMessageContent"] p,
+.user-glass-bubble {
+    color: #FFFFFF !important;
+    font-size: 0.95rem !important;
+    font-weight: 500 !important;
+    line-height: 1.55 !important;
+    margin: 0 !important;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6) !important;
+    word-break: break-word !important;
+}
+
+/* Assistant Message Bubble - Left-Aligned and Distinct Dark Slate Glass */
+div[data-testid="stChatMessage"]:has([data-testid="stChatMessageAvatarAssistant"]) {
+    display: flex !important;
+    flex-direction: row !important;
+    justify-content: flex-start !important;
+    align-items: flex-start !important;
+    margin-right: auto !important;
+    margin-left: 0 !important;
+    max-width: 90% !important;
+    margin-bottom: 1.2rem !important;
+}
+
+div[data-testid="stChatMessage"]:has([data-testid="stChatMessageAvatarAssistant"]) [data-testid="stChatMessageAvatarAssistant"] {
+    margin-right: 12px !important;
+    margin-left: 0 !important;
+    background: rgba(99, 102, 241, 0.3) !important;
+    border: 1px solid rgba(167, 139, 250, 0.4) !important;
+    border-radius: 50% !important;
+    width: 36px !important;
+    height: 36px !important;
+    backdrop-filter: blur(8px) !important;
+}
+
+div[data-testid="stChatMessage"]:has([data-testid="stChatMessageAvatarAssistant"]) [data-testid="stChatMessageContent"] {
+    background: rgba(15, 20, 38, 0.78) !important;
+    backdrop-filter: blur(20px) saturate(150%) !important;
+    -webkit-backdrop-filter: blur(20px) saturate(150%) !important;
+    border: 1px solid rgba(255, 255, 255, 0.12) !important;
+    border-radius: 16px 16px 16px 4px !important;
+    padding: 1.1rem 1.35rem !important;
+    color: #F1F3F9 !important;
+    max-width: 100% !important;
+    font-size: 0.92rem !important;
+    line-height: 1.65 !important;
+    box-shadow: 0 10px 32px rgba(0, 0, 0, 0.5) !important;
+}
+
+/* Avatars */
+div[data-testid="stChatMessageAvatarUser"],
+div[data-testid="stChatMessageAvatarAssistant"] {
+    background: rgba(22, 28, 48, 0.85) !important;
+    border: 1px solid var(--glass-border) !important;
+    border-radius: 50% !important;
+    width: 36px !important;
+    height: 36px !important;
+    backdrop-filter: blur(8px) !important;
+}
+
+div[data-testid="stChatMessageAvatarAssistant"] {
+    background: rgba(99, 102, 241, 0.3) !important;
+    border-color: rgba(167, 139, 250, 0.4) !important;
+}
+
+/* --- Explainability Expander --- */
 [data-testid="stExpander"] {
-    background: rgba(0, 0, 0, 0.3) !important;
-    border-left: 3px solid rgba(255, 255, 255, 0.1);
-    border-radius: 0 8px 8px 0;
+    background: rgba(11, 15, 28, 0.72) !important;
+    backdrop-filter: blur(14px) !important;
+    -webkit-backdrop-filter: blur(14px) !important;
+    border: 1px solid var(--glass-border) !important;
+    border-left: 3px solid var(--accent-violet) !important;
+    border-radius: var(--radius-sm) !important;
+    margin-top: 0.7rem !important;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.3) !important;
 }
+
+.streamlit-expanderHeader {
+    color: var(--text-secondary) !important;
+    font-size: 0.84rem !important;
+    font-weight: 500 !important;
+    padding: 0.5rem 0.85rem !important;
+}
+
 [data-testid="stExpanderDetails"] {
-    padding: 10px 15px !important;
+    padding: 0.7rem 0.95rem !important;
 }
+
 [data-testid="stExpanderDetails"] * {
-    font-size: 1rem !important;
-    line-height: 1.5 !important;
-    color: #cccccc !important;
+    font-size: 0.83rem !important;
+    line-height: 1.55 !important;
+    color: #CBD5E1 !important;
+}
+
+/* --- Verification Badges --- */
+.eval-badge-line {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.74rem;
+    color: #94A3B8;
+    margin-top: 0.6rem;
+    padding-top: 0.45rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.eval-badge-tag {
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+    padding: 2px 7px;
+    color: #E2E8F0;
+}
+
+/* --- Floating Glass Chat Input Box --- */
+div[data-testid="stChatInput"] {
+    background: rgba(13, 17, 30, 0.85) !important;
+    backdrop-filter: blur(24px) saturate(180%) !important;
+    -webkit-backdrop-filter: blur(24px) saturate(180%) !important;
+    border: 1px solid rgba(167, 139, 250, 0.35) !important;
+    border-radius: 18px !important;
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.65), 0 0 0 1px rgba(255, 255, 255, 0.06) !important;
+    transition: all 0.25s ease !important;
+}
+
+div[data-testid="stChatInput"]:focus-within {
+    border-color: var(--accent-violet) !important;
+    box-shadow: 0 18px 48px rgba(0, 0, 0, 0.75), 0 0 0 2px rgba(167, 139, 250, 0.4) !important;
+}
+
+div[data-testid="stChatInput"] textarea {
+    color: #FFFFFF !important;
+    -webkit-text-fill-color: #FFFFFF !important;
+    font-size: 0.92rem !important;
+}
+
+div[data-testid="stChatInput"] textarea::placeholder {
+    color: #94A3B8 !important;
+    -webkit-text-fill-color: #94A3B8 !important;
+}
+
+div[data-testid="stChatInput"] button {
+    background: linear-gradient(135deg, var(--accent-indigo), var(--accent-violet)) !important;
+    border: none !important;
+    border-radius: 50% !important;
+    color: #FFFFFF !important;
+    transition: transform 0.2s ease !important;
+}
+
+div[data-testid="stChatInput"] button:hover {
+    transform: scale(1.08) !important;
+    box-shadow: 0 0 14px rgba(167, 139, 250, 0.45) !important;
+}
+
+/* --- Spinner --- */
+.stSpinner > div {
+    border-top-color: var(--accent-violet) !important;
+    border-right-color: var(--accent-indigo) !important;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .main .block-container {
+        padding-top: 1rem !important;
+        padding-left: 0.8rem !important;
+        padding-right: 0.8rem !important;
+    }
+    .hero-clear-container {
+        padding: 2.5rem 0.8rem 1.5rem 0.8rem;
+    }
+    .hero-heading {
+        font-size: 1.6rem !important;
+    }
+    .hero-subheading {
+        font-size: 0.9rem !important;
+    }
+    div[data-testid="stChatMessage"]:has(div[data-testid="stChatMessageAvatarUser"]) [data-testid="stChatMessageContent"],
+    div[data-testid="stChatMessage"]:has(div[data-testid="stChatMessageAvatarAssistant"]) [data-testid="stChatMessageContent"] {
+        max-width: 95% !important;
+    }
 }
