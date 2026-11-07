@@ -124,9 +124,6 @@ This file tracks all facts, updates, and major architectural decisions made duri
 
 
 [2026-11-07] PHASE 14 — ADMISSION ASSISTANT UI UPDATES
-
 - Updated the Streamlit frontend in ui/app.py with the revised Admission Assistant interface.
-
 - Redesigned and updated ui/styles.css to implement the new UI styling.
-
 - Added ui/srm_campus.jpg as a new visual asset for the interface.
