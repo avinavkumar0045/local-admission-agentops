@@ -205,55 +205,58 @@ else:
 
     # Render Chat History
     for msg in st.session_state.messages:
-        avatar_icon = "🧑‍🎓" if msg["role"] == "user" else "🎓"
-        with st.chat_message(msg["role"], avatar=avatar_icon):
-            st.markdown(msg["content"])
-            
-            # Explainability Expander
-            if "context" in msg and msg["context"]:
-                with st.expander("🔍 View Sources (Explainability)"):
-                    for idx, chunk in enumerate(msg["context"]):
-                        source_file = chunk.get("metadata", {}).get("source", "Official Institutional Record")
-                        dist = chunk.get("distance", 0.0)
-                        st.markdown(f"**Source {idx+1}:** `{source_file}` *(Distance: {dist:.2f})*")
-                        st.write(chunk.get("content", ""))
+        if msg["role"] == "user":
+            with st.chat_message("user"):
+                st.markdown(f'<div class="user-glass-bubble">{msg["content"]}</div>', unsafe_allow_html=True)
+        else:
+            with st.chat_message("assistant", avatar="🎓"):
+                st.markdown(msg["content"])
+                
+                # Explainability Expander
+                if "context" in msg and msg["context"]:
+                    with st.expander("🔍 View Sources (Explainability)"):
+                        for idx, chunk in enumerate(msg["context"]):
+                            source_file = chunk.get("metadata", {}).get("source", "Official Institutional Record")
+                            dist = chunk.get("distance", 0.0)
+                            st.markdown(f"**Source {idx+1}:** `{source_file}` *(Distance: {dist:.2f})*")
+                            st.write(chunk.get("content", ""))
 
-            # AgentOps Semantic Verification Badge
-            if msg.get("eval_metrics"):
-                m = msg["eval_metrics"]
-                faith = m.get("faithfulness", 0.0)
-                ctx_rel = m.get("context_relevance", 0.0)
-                status = m.get("grounding_status", "N/A")
-                st.markdown(
-                    f"""<div class="eval-badge-line">
-                        <span>🛡️ AgentOps Grounding:</span>
-                        <span class="eval-badge-tag">Faithfulness: {faith:.2f}</span>
-                        <span class="eval-badge-tag">Relevance: {ctx_rel:.2f}</span>
-                        <span class="eval-badge-tag">Status: {status}</span>
-                    </div>""",
-                    unsafe_allow_html=True
-                )
+                # AgentOps Semantic Verification Badge
+                if msg.get("eval_metrics"):
+                    m = msg["eval_metrics"]
+                    faith = m.get("faithfulness", 0.0)
+                    ctx_rel = m.get("context_relevance", 0.0)
+                    status = m.get("grounding_status", "N/A")
+                    st.markdown(
+                        f"""<div class="eval-badge-line">
+                            <span>🛡️ AgentOps Grounding:</span>
+                            <span class="eval-badge-tag">Faithfulness: {faith:.2f}</span>
+                            <span class="eval-badge-tag">Relevance: {ctx_rel:.2f}</span>
+                            <span class="eval-badge-tag">Status: {status}</span>
+                        </div>""",
+                        unsafe_allow_html=True
+                    )
 
 # --- Chat Input & Execution ---
 chat_input_val = st.chat_input("Ask anything about college admissions...")
 
 if chat_input_val:
-    # 1. Render user query immediately and record in history
+    # 1. Render user query immediately in blue translucent glass bubble and record in history
     st.session_state.messages.append({"role": "user", "content": chat_input_val})
     record_user_query(chat_input_val)
     
-    with st.chat_message("user", avatar="🧑‍🎓"):
-        st.markdown(chat_input_val)
+    with st.chat_message("user"):
+        st.markdown(f'<div class="user-glass-bubble">{chat_input_val}</div>', unsafe_allow_html=True)
 
     # 2. Fetch response from FastAPI backend
     with st.chat_message("assistant", avatar="🎓"):
         with st.spinner("Analyzing admission records..."):
             try:
-                # 130s timeout to match backend processing limits
+                # 240s timeout to allow local CPU LLM inference to complete reliably
                 response = httpx.post(
                     "http://127.0.0.1:8000/query", 
                     json={"query": chat_input_val},
-                    timeout=130.0
+                    timeout=240.0
                 )
                 response.raise_for_status()
                 data = response.json()
