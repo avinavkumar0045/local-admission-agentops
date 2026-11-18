@@ -7,6 +7,7 @@ sentence-transformers
 faiss-cpu
 neo4j
 pydantic
+reportlab
 
 # AgentOps Pipeline
 mysql-connector-python

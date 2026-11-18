@@ -16,7 +16,7 @@ To ensure isolated and accurate performance measurements, the system employs a s
 *   **LLM Engine:** Local Qwen 2.5 Coder (via Ollama)
 *   **Vector Database:** FAISS (Facebook AI Similarity Search)
 *   **Embedding Model:** `sentence-transformers/all-MiniLM-L6-v2`
-*   **Knowledge Base:** A massive, chunked index (991 semantic chunks) ingested from high-density PDFs (e.g., JEE Advanced Brochures) and tabular Excel data (e.g., AISHE Reports).
+*   **Knowledge Base:** Searchable admission policies, counselling data, institutional rankings, AISHE reports, faculty data, and engineering curricula indexed from official PDFs, spreadsheets, and structured CSV/Markdown.
 *   **Orchestration:** FastAPI backend serving a custom Streamlit UI.
 
 ### 2.2 The AgentOps Trace Pipeline
@@ -31,7 +31,15 @@ To ensure isolated and accurate performance measurements, the system employs a s
 *   **Failure Injection Taxonomy:** The architecture successfully isolates and categorizes distinct failure modes (e.g., `LLM_INFERENCE_ERROR`, `RETRIEVAL_DB_OUTAGE`) bypassing generic HTTP 500 errors.
 *   **Automated Alerting:** Grafana constantly monitors backend spans. If a critical failure condition is breached, a Webhook instantly routes a high-priority alert to the engineering team.
 
-## 4. Installation & Quickstart
+## 4. Knowledge Base Coverage and Limits
+
+The knowledge base includes India-wide AISHE faculty statistics for 2023-24, AICTE model undergraduate curricula for Computer Science, Civil, Electronics and Communication, Electrical, and Mechanical Engineering, and an SRMIST 2025-26 engineering faculty handbook plus the official SRMIST 2026 CSE-IT semester curriculum. Source PDFs and extracted reference documents are under `data/raw/academic_sources`, `data/raw`, and `data/processed`; structured AISHE and SRM curriculum tables are under `data/structured`.
+
+AISHE supplies national and state-level faculty counts, not a unified list of named faculty. Named faculty records are institution-specific and can become stale, so the SRM handbook entries are labelled by campus and source year. AICTE model curricula are national references, not identical syllabi mandated at every college. A college's latest approved curriculum takes precedence for student-specific answers.
+
+Run `python scripts/prepare_academic_data.py` to refresh the extracted faculty tables, SRM roster/curriculum CSVs, and PDFs from the downloaded source files. Then run `python -m src.agent.ingest` to rebuild the FAISS index.
+
+## 5. Installation & Quickstart
 
 ### Prerequisites
 *   Apple Silicon Mac (M-series) with at least 8-16 GB unified memory.
@@ -63,7 +71,7 @@ python -m uvicorn src.agent.api:app --port 8000
 python -m streamlit run ui/app.py --server.port 8501
 ```
 
-## 5. Experimental Results
+## 6. Experimental Results
 In a controlled A/B experiment simulating catastrophic database and LLM parsing failures, the un-instrumented baseline ("AgentOps OFF") required manual parsing of unstructured terminal logs, yielding a high Mean Time to Resolution (MTTR). 
 
 When AgentOps was enabled, Grafana instantly fired a webhook alert, and the Trace Explorer highlighted the exact failing span (`llm.generation`) in red. Observability overhead added zero measurable latency to the end-user, proving that native OpenTelemetry tracing is a mandatory, low-cost requirement for production-grade AI engineering.

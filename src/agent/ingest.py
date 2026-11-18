@@ -73,7 +73,8 @@ def ingest_documents():
     all_chunks = []
     metadata = []
     
-    all_files = glob.glob(os.path.join(DATA_DIR, "*.*"))
+    # Include official source PDFs stored under data/raw/academic_sources.
+    all_files = glob.glob(os.path.join(DATA_DIR, "**", "*.*"), recursive=True)
     for file_path in all_files:
         print(f"Processing: {os.path.basename(file_path)}")
         text = extract_text_from_file(file_path)
