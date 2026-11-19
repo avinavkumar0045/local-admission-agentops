@@ -17,7 +17,7 @@ VECTOR_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file
 
 class FAISSRetriever:
     def __init__(self):
-        self.model = SentenceTransformer('all-MiniLM-L6-v2')
+        self.model = SentenceTransformer('all-MiniLM-L6-v2', local_files_only=True)
         self.index = faiss.read_index(os.path.join(VECTOR_DIR, "faiss.index"))
         with open(os.path.join(VECTOR_DIR, "metadata.json"), 'r') as f:
             data = json.load(f)
@@ -40,27 +40,64 @@ class FAISSRetriever:
                 if failure_simulation:
                     raise ConnectionError("FATAL: Unable to connect to FAISS Vector Database on port 5432.")
 
-                # Search FAISS
-                distances, indices = self.index.search(np.array(query_vector).astype('float32'), top_k)
+                # Search FAISS top candidates for hybrid re-ranking
+                search_k = min(40, len(self.chunks))
+                distances, indices = self.index.search(np.array(query_vector).astype('float32'), search_k)
             
             with tracer.start_as_current_span("context.selection") as ctx_span:
                 candidate_results = []
                 source_files = set()
                 
-                for i in range(top_k):
+                stopwords = {'what', 'are', 'the', 'from', 'this', 'that', 'with', 'which', 'and', 'for', 'how', 'many', 'reported', 'according', 'to', 'does', 'in', 'is', 'a', 'of', 'at', 'on', 'who'}
+                q_tokens = [w.lower() for w in re.findall(r'\w+', query) if w.lower() not in stopwords and len(w) > 2]
+                raw_entities = [w.lower() for w in re.findall(r'\b[A-Z][a-z]+\b', query) if w.lower() not in stopwords]
+                is_person_query = any(k in query.lower() for k in ['who is', 'dean', 'hod', 'head of', 'chancellor', 'professor'])
+                
+                scored_candidates = []
+                for i in range(search_k):
                     idx = int(indices[0][i])
                     dist = float(distances[0][i])
+                    if idx >= len(self.chunks) or dist >= 1.5:
+                        continue
+                    chunk_text = self.chunks[idx]
+                    chunk_lower = chunk_text.lower()
+                    source = self.metadata[idx].get("source", "").lower()
                     
-                    if idx < len(self.chunks) and dist < 1.5:  # Arbitrary threshold
-                        chunk_text = self.chunks[idx]
-                        source = self.metadata[idx].get("source", "Unknown")
-                        source_files.add(source)
-                        
-                        candidate_results.append({
-                            "content": chunk_text,
-                            "metadata": self.metadata[idx],
-                            "distance": dist
-                        })
+                    matches = sum(1 for w in q_tokens if w in chunk_lower)
+                    entity_matches = sum(2 for e in raw_entities if e in chunk_lower)
+                    dense_score = 1.0 / (1.0 + dist)
+                    keyword_score = (matches + entity_matches) / max(1, len(q_tokens) + 2 * len(raw_entities))
+                    
+                    source_bias = 0.0
+                    if is_person_query:
+                        if any(k in source for k in ['faculty', 'handbook', 'curriculum']):
+                            source_bias += 0.20
+                        if 'policy' in source:
+                            source_bias -= 0.15
+                    
+                    hybrid_score = 0.35 * dense_score + 0.65 * keyword_score + source_bias
+                    
+                    scored_candidates.append({
+                        "idx": idx,
+                        "dist": dist,
+                        "score": hybrid_score
+                    })
+                
+                scored_candidates.sort(key=lambda x: x["score"], reverse=True)
+                top_selected = scored_candidates[:top_k]
+                
+                for item in top_selected:
+                    idx = item["idx"]
+                    dist = item["dist"]
+                    chunk_text = self.chunks[idx]
+                    source = self.metadata[idx].get("source", "Unknown")
+                    source_files.add(source)
+                    
+                    candidate_results.append({
+                        "content": chunk_text,
+                        "metadata": self.metadata[idx],
+                        "distance": dist
+                    })
 
                 # --- SAGE-QA LTR Context Pruning ---
                 # Prunes out filler lines to reduce prompt token size by ~40% for faster LLM generation
@@ -75,7 +112,7 @@ class FAISSRetriever:
                             continue
                         line_words = set(re.findall(r'\w+', line_stripped.lower()))
                         # Keep line if it shares semantic tokens with query or carries admission facts
-                        if (line_words & query_words) or any(k in line_stripped.lower() for k in ["fee", "eligib", "percent", "marks", "pcm", "exam", "rank", "quota", "seat", "date", "refund"]):
+                        if (line_words & query_words) or any(k in line_stripped.lower() for k in ["fee", "eligib", "percent", "marks", "pcm", "exam", "rank", "quota", "seat", "date", "refund", "program", "course", "degree", "law", "hotel", "catering", "admission", "curriculum"]):
                             pruned_lines.append(line_stripped)
                     
                     # If pruning filtered too aggressively, preserve original chunk

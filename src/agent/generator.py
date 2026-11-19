@@ -17,16 +17,18 @@ class LocalQwenGenerator:
             gen_span.set_attribute("model", self.model_name)
             
             with tracer.start_as_current_span("prompt.construction") as prompt_span:
-                if not context:
-                    return FALLBACK_RESPONSE
-                context_texts = "\n\n".join([c["content"] for c in context])
+                context_texts = "\n\n".join([c["content"] for c in context]) if context else "No direct context available in knowledge base."
                 prompt = build_prompt(query=query, context_texts=context_texts)
                 prompt_span.set_attribute("prompt_length", len(prompt))
             
             payload = {
                 "model": self.model_name,
                 "prompt": prompt,
-                "stream": False
+                "stream": False,
+                "options": {
+                    "num_predict": 100,
+                    "temperature": 0.2
+                }
             }
             
             try:

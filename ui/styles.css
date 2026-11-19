@@ -489,3 +489,126 @@ div[data-testid="stChatInput"] button:hover {
         max-width: 95% !important;
     }
 }
+
+/* ═══════════════════════════════════════════
+   AGENTOPS IN-APP ALERT BANNERS & INCIDENT UI
+   ═══════════════════════════════════════════ */
+.agentops-alert-banner {
+    border-radius: var(--radius-sm);
+    padding: 0.85rem 1.1rem;
+    margin-top: 0.75rem;
+    margin-bottom: 0.5rem;
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+    animation: alertSlideIn 0.3s ease-out;
+}
+
+@keyframes alertSlideIn {
+    from { opacity: 0; transform: translateY(-6px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.agentops-alert-banner.warning {
+    background: linear-gradient(135deg, rgba(245, 158, 11, 0.16), rgba(180, 83, 9, 0.08));
+    border: 1px solid rgba(245, 158, 11, 0.45);
+    border-left: 4px solid #F59E0B;
+}
+
+.agentops-alert-banner.critical {
+    background: linear-gradient(135deg, rgba(239, 68, 68, 0.20), rgba(185, 28, 28, 0.1));
+    border: 1px solid rgba(239, 68, 68, 0.55);
+    border-left: 4px solid #EF4444;
+}
+
+.agentops-alert-banner.info {
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.15), rgba(29, 78, 216, 0.08));
+    border: 1px solid rgba(59, 130, 246, 0.4);
+    border-left: 4px solid #3B82F6;
+}
+
+.alert-banner-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 0.4rem;
+}
+
+.alert-title-wrap {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.alert-title-text {
+    font-size: 0.88rem;
+    font-weight: 700;
+    color: #F8FAFC;
+    letter-spacing: -0.01em;
+}
+
+.alert-severity-badge {
+    font-size: 0.68rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    padding: 2px 8px;
+    border-radius: 9999px;
+    letter-spacing: 0.04em;
+}
+
+.alert-severity-badge.p1 {
+    background: rgba(239, 68, 68, 0.25);
+    color: #FCA5A5;
+    border: 1px solid rgba(239, 68, 68, 0.5);
+}
+
+.alert-severity-badge.p2 {
+    background: rgba(245, 158, 11, 0.25);
+    color: #FCD34D;
+    border: 1px solid rgba(245, 158, 11, 0.5);
+}
+
+.alert-severity-badge.p3 {
+    background: rgba(59, 130, 246, 0.25);
+    color: #93C5FD;
+    border: 1px solid rgba(59, 130, 246, 0.5);
+}
+
+.alert-banner-body {
+    font-size: 0.81rem;
+    color: #CBD5E1;
+    line-height: 1.5;
+    margin-bottom: 0.45rem;
+}
+
+.alert-banner-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 0.72rem;
+    color: #94A3B8;
+    padding-top: 0.4rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.alert-banner-footer a {
+    color: #A78BFA;
+    text-decoration: underline;
+    font-weight: 600;
+}
+
+.incident-feed-card {
+    background: rgba(15, 23, 42, 0.7);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 6px;
+    padding: 0.65rem 0.85rem;
+    margin-bottom: 0.6rem;
+    font-size: 0.78rem;
+}
+
+.incident-card-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.35rem;
+}

@@ -34,7 +34,8 @@ CANONICAL_VOCABULARY = {
     
     # Disciplines & degrees
     "computer", "science", "engineering", "btech", "mtech", "mba", "physics",
-    "chemistry", "mathematics", "pcm", "b.tech", "m.tech", "tech"
+    "chemistry", "mathematics", "pcm", "b.tech", "m.tech", "tech",
+    "hotel", "catering", "law", "management", "program", "programs", "undergraduate", "postgraduate", "llb", "bba"
 }
 
 # Domain synonym & abbreviation mapper

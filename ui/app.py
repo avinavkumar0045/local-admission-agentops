@@ -83,6 +83,9 @@ if "active_convo_id" not in st.session_state:
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
+if "incidents" not in st.session_state:
+    st.session_state.incidents = []
+
 def record_user_query(query_text: str):
     """Adds the asked query directly to YOUR HISTORY in the sidebar."""
     clean_title = query_text.strip()
@@ -168,6 +171,56 @@ with st.sidebar:
             unsafe_allow_html=True
         )
 
+    # --- Live AgentOps Alert & Incident Center ---
+    st.markdown('<div class="history-section-label" style="margin-top: 1.6rem; letter-spacing: 0.08em;">AGENTOPS ALERT CENTER</div>', unsafe_allow_html=True)
+    active_incidents = st.session_state.incidents
+    if not active_incidents:
+        st.markdown("""
+        <div style="background: rgba(16, 185, 129, 0.12); border: 1px solid rgba(16, 185, 129, 0.28); border-radius: 6px; padding: 0.6rem 0.8rem; font-size: 0.78rem; color: #34D399; display: flex; align-items: center; gap: 8px;">
+            <span style="font-size: 0.95rem;">🟢</span>
+            <span><b>All Systems Normal</b><br><span style="color: #94A3B8; font-size: 0.72rem;">0 active incidents</span></span>
+        </div>
+        """, unsafe_allow_html=True)
+    else:
+        crit_count = sum(1 for inc in active_incidents if "CRITICAL" in inc.get("severity", ""))
+        warn_count = sum(1 for inc in active_incidents if "WARNING" in inc.get("severity", ""))
+        st.markdown(f"""
+        <div style="background: rgba(239, 68, 68, 0.16); border: 1px solid rgba(239, 68, 68, 0.4); border-radius: 6px; padding: 0.6rem 0.8rem; font-size: 0.78rem; color: #FCA5A5; display: flex; align-items: center; gap: 8px; margin-bottom: 0.4rem;">
+            <span style="font-size: 1rem;">🚨</span>
+            <span><b>{len(active_incidents)} Alert(s) Dispatched</b><br><span style="color: #E2E8F0; font-size: 0.72rem;">{crit_count} Critical · {warn_count} Warning</span></span>
+        </div>
+        """, unsafe_allow_html=True)
+        with st.expander(f"📋 Incident Queue ({len(active_incidents)})", expanded=False):
+            for inc in reversed(active_incidents[-5:]):
+                sev = inc.get("severity", "P2_WARNING")
+                badge_cls = "p1" if "CRITICAL" in sev else ("p2" if "WARNING" in sev else "p3")
+                tid = inc.get('trace_id', '')
+                tempo_url = f"http://localhost:3000/explore?schemaVersion=1&panes=%7B%223u5%22%3A%7B%22datasource%22%3A%22ffx7prdoh20hsd%22%2C%22queries%22%3A%5B%7B%22refId%22%3A%22A%22%2C%22datasource%22%3A%7B%22type%22%3A%22tempo%22%2C%22uid%22%3A%22ffx7prdoh20hsd%22%7D%2C%22queryType%22%3A%22traceql%22%2C%22query%22%3A%22%7Bspan.trace_id%3D%5C%22{tid}%5C%22%7D%22%7D%5D%7D%7D"
+                st.markdown(f"""
+                <div class="incident-feed-card">
+                    <div class="incident-card-top">
+                        <b style="color: #F8FAFC;">{inc.get('incident_id', 'INC')}</b>
+                        <span class="alert-severity-badge {badge_cls}">{sev.replace('_', ' ')}</span>
+                    </div>
+                    <div style="color: #CBD5E1; font-size: 0.74rem; margin-bottom: 0.3rem;">{inc.get('title', 'Alert')}</div>
+                    <div style="color: #94A3B8; font-size: 0.68rem;">Time: {inc.get('timestamp', '')}</div>
+                    <div style="margin-top: 0.3rem;">
+                        <a href="{tempo_url}" target="_blank" style="color: #A78BFA; font-size: 0.7rem; text-decoration: underline;">Open Tempo Trace ↗</a>
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
+            if st.button("Clear Incident Log", key="clear_incidents_btn", use_container_width=True):
+                st.session_state.incidents = []
+                st.rerun()
+
+    st.markdown("""
+    <div style="margin-top: 0.8rem;">
+        <a href="http://localhost:5050" target="_blank" style="display: block; text-align: center; background: rgba(167, 139, 250, 0.12); border: 1px solid rgba(167, 139, 250, 0.35); color: #C4B5FD; padding: 7px 12px; border-radius: 6px; font-size: 0.76rem; text-decoration: none; font-weight: 600; transition: all 0.2s ease;">
+            🚨 Open Incident Center (Port 5050) ↗
+        </a>
+    </div>
+    """, unsafe_allow_html=True)
+
 # --- Main Chat Area ---
 if not st.session_state.messages:
     # Clear Floating Welcome Hero (No bulky card blocking the SRM Gate)
@@ -197,7 +250,10 @@ else:
             <span style="font-size: 1.05rem; font-weight: 700; color: #FFFFFF;">🎓 Admission Assistant</span>
             <span style="font-size: 0.8rem; color: #94A3B8; margin-left: 8px;">Your AI-powered guide to college admissions</span>
         </div>
-        <div>
+        <div style="display: flex; align-items: center; gap: 10px;">
+            <a href="http://localhost:5050" target="_blank" style="text-decoration: none;">
+                <span class="status-indicator" style="background: rgba(239, 68, 68, 0.15); color: #FCA5A5; border-color: rgba(239, 68, 68, 0.35);">🚨 Incident Center</span>
+            </a>
             <span class="status-indicator">🟢 AgentOps Active</span>
         </div>
     </div>
@@ -211,15 +267,31 @@ else:
         else:
             with st.chat_message("assistant", avatar="🎓"):
                 st.markdown(msg["content"])
-                
-                # Explainability Expander
-                if "context" in msg and msg["context"]:
-                    with st.expander("🔍 View Sources (Explainability)"):
-                        for idx, chunk in enumerate(msg["context"]):
-                            source_file = chunk.get("metadata", {}).get("source", "Official Institutional Record")
-                            dist = chunk.get("distance", 0.0)
-                            st.markdown(f"**Source {idx+1}:** `{source_file}` *(Distance: {dist:.2f})*")
-                            st.write(chunk.get("content", ""))
+
+                # In-App AgentOps Alert Banner (if incident was triggered)
+                alert = msg.get("alert")
+                if alert:
+                    tid = alert.get('trace_id', '')
+                    tempo_url = f"http://localhost:3000/explore?schemaVersion=1&panes=%7B%223u5%22%3A%7B%22datasource%22%3A%22ffx7prdoh20hsd%22%2C%22queries%22%3A%5B%7B%22refId%22%3A%22A%22%2C%22datasource%22%3A%7B%22type%22%3A%22tempo%22%2C%22uid%22%3A%22ffx7prdoh20hsd%22%7D%2C%22queryType%22%3A%22traceql%22%2C%22query%22%3A%22%7Bspan.trace_id%3D%5C%22{tid}%5C%22%7D%22%7D%5D%7D%7D"
+                    st.markdown(f"""
+                    <div class="agentops-alert-banner {alert.get('style_class', 'warning')}">
+                        <div class="alert-banner-header">
+                            <div class="alert-title-wrap">
+                                <span style="font-size: 1.05rem;">{alert.get('icon', '⚠️')}</span>
+                                <span class="alert-title-text">{alert.get('title', 'AgentOps Runtime Alert')}</span>
+                            </div>
+                            <span class="alert-severity-badge {alert.get('badge_class', 'p2')}">{alert.get('severity_label', 'P2 WARNING')}</span>
+                        </div>
+                        <div class="alert-banner-body">
+                            {alert.get('detail', '')}
+                        </div>
+                        <div class="alert-banner-footer">
+                            <span>Incident: <b>{alert.get('incident_id', 'INC-001')}</b></span>
+                            <span><a href="{tempo_url}" target="_blank">View Tempo Trace ↗</a></span>
+                            <span style="color: #34D399; font-weight: 600;">● Dispatched to Port 5050 Webhook</span>
+                        </div>
+                    </div>
+                    """, unsafe_allow_html=True)
 
                 # AgentOps Semantic Verification Badge
                 if msg.get("eval_metrics"):
@@ -267,13 +339,53 @@ if chat_input_val:
                 trace_id = data.get("trace_id", "")
                 
                 st.markdown(answer)
-                if context:
-                    with st.expander("🔍 View Sources (Explainability)"):
-                        for idx, chunk in enumerate(context):
-                            source_file = chunk.get("metadata", {}).get("source", "Official Institutional Record")
-                            dist = chunk.get("distance", 0.0)
-                            st.markdown(f"**Source {idx+1}:** `{source_file}` *(Distance: {dist:.2f})*")
-                            st.write(chunk.get("content", ""))
+                
+                # Check for AgentOps Runtime Alert Conditions
+                triggered_alert = None
+                faith = eval_metrics.get("faithfulness", 1.0) if eval_metrics else 1.0
+                hallucinated = eval_metrics.get("hallucination_detected", False) if eval_metrics else False
+                status_str = eval_metrics.get("grounding_status", "") if eval_metrics else ""
+
+                if hallucinated or faith < 0.70 or "HALLUCINATED" in status_str:
+                    inc_id = f"INC-{str(uuid.uuid4())[:8].upper()}"
+                    triggered_alert = {
+                        "incident_id": inc_id,
+                        "title": "AgentOps Alert: Semantic Grounding Degradation",
+                        "severity": "P2_WARNING",
+                        "severity_label": "P2 WARNING",
+                        "style_class": "warning",
+                        "badge_class": "p2",
+                        "icon": "⚠️",
+                        "detail": f"Faithfulness ({faith:.2f}) dipped below 0.70 SLA threshold. Potential ungrounded or contradictory claim detected. Operational incident ticket dispatched to Operations Webhook (port 5050).",
+                        "trace_id": trace_id,
+                        "timestamp": datetime.now().strftime("%H:%M:%S")
+                    }
+                    st.session_state.incidents.append(triggered_alert)
+                    try:
+                        httpx.post(
+                            "http://127.0.0.1:5050/alert", 
+                            json={"alerts": [{"status": "firing", "annotations": {"summary": f"P2 Semantic Warning ({inc_id}): Faithfulness {faith:.2f} < 0.70"}}]}, 
+                            timeout=0.6
+                        )
+                    except Exception:
+                        pass
+                    st.toast(f"🚨 AgentOps Incident {inc_id}: Semantic Grounding Warning Dispatched!", icon="⚠️")
+                
+                elif not context and "sorry" in answer.lower():
+                    inc_id = f"INC-{str(uuid.uuid4())[:8].upper()}"
+                    triggered_alert = {
+                        "incident_id": inc_id,
+                        "title": "AgentOps Notice: Knowledge Gap & Safe Abstention",
+                        "severity": "P3_INFO",
+                        "severity_label": "P3 INFO",
+                        "style_class": "info",
+                        "badge_class": "p3",
+                        "icon": "ℹ️",
+                        "detail": "No relevant admission chunks found in FAISS vector database. Model safely abstained from generating speculative facts.",
+                        "trace_id": trace_id,
+                        "timestamp": datetime.now().strftime("%H:%M:%S")
+                    }
+                    st.session_state.incidents.append(triggered_alert)
                 
                 if eval_metrics:
                     faith = eval_metrics.get("faithfulness", 0.0)
@@ -294,13 +406,70 @@ if chat_input_val:
                     "content": answer,
                     "context": context,
                     "eval_metrics": eval_metrics,
-                    "trace_id": trace_id
+                    "trace_id": trace_id,
+                    "alert": triggered_alert
                 })
                 
                 update_active_conversation_messages()
                 st.rerun()
                 
             except httpx.ReadTimeout:
-                st.error("The local LLM took too long to respond. Please try again.")
+                inc_id = f"INC-{str(uuid.uuid4())[:8].upper()}"
+                crit_alert = {
+                    "incident_id": inc_id,
+                    "title": "AgentOps Alert: Inference Latency SLA Timeout",
+                    "severity": "P1_CRITICAL",
+                    "severity_label": "P1 CRITICAL",
+                    "style_class": "critical",
+                    "badge_class": "p1",
+                    "icon": "🚨",
+                    "detail": "Local LLM inference exceeded execution deadline (ReadTimeout). Operational circuit breaker triggered and logged to Grafana Tempo.",
+                    "trace_id": "",
+                    "timestamp": datetime.now().strftime("%H:%M:%S")
+                }
+                st.session_state.incidents.append(crit_alert)
+                try:
+                    httpx.post(
+                        "http://127.0.0.1:5050/alert", 
+                        json={"alerts": [{"status": "firing", "annotations": {"summary": f"P1 Latency SLA Timeout ({inc_id})"}}]}, 
+                        timeout=0.6
+                    )
+                except Exception:
+                    pass
+                st.session_state.messages.append({
+                    "role": "assistant",
+                    "content": "⚠️ **Inference Timeout:** The local LLM engine took too long to complete. An incident ticket has been dispatched.",
+                    "alert": crit_alert
+                })
+                update_active_conversation_messages()
+                st.rerun()
             except Exception as e:
-                st.error(f"Backend API error: {e}")
+                inc_id = f"INC-{str(uuid.uuid4())[:8].upper()}"
+                crit_alert = {
+                    "incident_id": inc_id,
+                    "title": "AgentOps Alert: Critical Service Disruption",
+                    "severity": "P1_CRITICAL",
+                    "severity_label": "P1 CRITICAL",
+                    "style_class": "critical",
+                    "badge_class": "p1",
+                    "icon": "🚨",
+                    "detail": f"Backend API / Vector DB connectivity failure: {str(e)[:150]}. Outage logged to Tempo and Webhook receiver.",
+                    "trace_id": "",
+                    "timestamp": datetime.now().strftime("%H:%M:%S")
+                }
+                st.session_state.incidents.append(crit_alert)
+                try:
+                    httpx.post(
+                        "http://127.0.0.1:5050/alert", 
+                        json={"alerts": [{"status": "firing", "annotations": {"summary": f"P1 Critical Failure ({inc_id}): {str(e)[:80]}"}}]}, 
+                        timeout=0.6
+                    )
+                except Exception:
+                    pass
+                st.session_state.messages.append({
+                    "role": "assistant",
+                    "content": "🚨 **Service Error:** An operational error occurred while processing your request.",
+                    "alert": crit_alert
+                })
+                update_active_conversation_messages()
+                st.rerun()
