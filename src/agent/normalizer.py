@@ -186,3 +186,105 @@ class QueryNormalizer:
         }
 
         return normalized_query, metadata
+
+
+# ─────────────────────────────────────────────────────────────
+# DOMAIN SCOPE GUARDRAIL (Zero-Cost Pre-Execution Intent Filter)
+# ─────────────────────────────────────────────────────────────
+OUT_OF_SCOPE_PATTERNS = [
+    r'\bcapital of\b',
+    r'\bpresident of\b',
+    r'\bprime minister of\b',
+    r'\bweather (in|today|tomorrow)\b',
+    r'\bhow to (cook|bake|make|fry)\b',
+    r'\b(recipe|cake|pizza|burger|pasta)\b',
+    r'\b(movie|film|actor|actress|song|lyrics|cinema)\b',
+    r'\bwho won (the|ipl|world cup|match|election)\b',
+    r'\bwrite (a )?(python|java|c\+\+|javascript|code|script|sql query|essay|story|poem)\b',
+    r'\b(bitcoin|crypto|ethereum|stock price|trading|forex)\b',
+    r'\btell me a (joke|riddle|funny story)\b',
+    r'\btranslate .* to (french|spanish|german|hindi|chinese)\b',
+]
+
+IN_SCOPE_TERMS = {
+    # Admissions, exams, applications
+    'admission', 'admissions', 'apply', 'application', 'eligibility', 'eligible',
+    'criteria', 'cutoff', 'cutoffs', 'rank', 'ranking', 'marks', 'percentage', 'percent',
+    'quota', 'reservation', 'seats', 'seat', 'counseling', 'counselling', 'allotment',
+    'selection', 'deadline', 'dates', 'schedule', 'enrollment', 'registration',
+    
+    # Financials & policies
+    'fees', 'fee', 'tuition', 'scholarship', 'scholarships', 'concession', 'waiver',
+    'refund', 'deposit', 'caution', 'policy', 'rules', 'regulations', 'mandatory',
+    
+    # Academics, degrees, courses
+    'program', 'programs', 'course', 'courses', 'degree', 'degrees', 'curriculum',
+    'syllabus', 'semester', 'credits', 'cgpa', 'sgpa', 'btech', 'mtech', 'mba',
+    'bba', 'bca', 'mca', 'llb', 'law', 'hotel', 'catering', 'hospitality',
+    'engineering', 'medical', 'mbbs', 'bds', 'pharmacy', 'biotechnology', 'biotech',
+    'physics', 'chemistry', 'maths', 'mathematics', 'computer', 'science', 'cse',
+    'ece', 'mech', 'civil', 'electronics', 'electrical', 'information', 'technology',
+    'undergraduate', 'postgraduate', 'diploma', 'phd', 'doctorate',
+    
+    # Faculty & Campus Administration
+    'dean', 'hod', 'faculty', 'professor', 'professors', 'teachers', 'director',
+    'chancellor', 'staff', 'head', 'vice', 'administration',
+    
+    # Campuses & Accommodation
+    'campus', 'campuses', 'hostel', 'hostels', 'mess', 'room', 'rooms', 'boarding',
+    'facilities', 'kattankulathur', 'ktr', 'ramapuram', 'vadapalani', 'modinagar',
+    'ghaziabad', 'delhi', 'chennai', 'tiruchirappalli', 'trichy', 'sonepat', 'amaravati',
+    'potheri', 'tamil', 'nadu', 'haryana',
+    
+    # Higher Education bodies & tests
+    'srm', 'srmist', 'srmjeee', 'srmjee', 'srmjeel', 'srmjeem', 'jee', 'neet',
+    'comedk', 'josaa', 'clat', 'cuet', 'ugc', 'aishe', 'aicte', 'nirf', 'naac',
+    'university', 'universities', 'college', 'colleges', 'autonomous', 'institute',
+    'institutions', 'national', 'importance', 'placement', 'placements', 'highest',
+    'package', 'average', 'recruiters', 'companies'
+}
+
+class DomainScopeGuardrail:
+    """
+    Evaluates whether an incoming query belongs to higher-education/admissions.
+    Executes in < 1ms to short-circuit out-of-scope queries before FAISS or LLM calls.
+    """
+    def __init__(self):
+        pass
+
+    def evaluate_scope(self, query: str) -> Tuple[bool, str, Dict[str, Any]]:
+        t0 = time.time()
+        q_lower = query.lower()
+        
+        # 1. Check explicit out-of-scope patterns
+        for pat in OUT_OF_SCOPE_PATTERNS:
+            match = re.search(pat, q_lower)
+            if match:
+                elapsed_ms = (time.time() - t0) * 1000
+                return False, "EXPLICIT_OUT_OF_SCOPE", {
+                    "matched_pattern": match.group(0),
+                    "latency_ms": round(elapsed_ms, 3),
+                    "action": "BLOCKED"
+                }
+
+        # 2. Check presence of educational/admission domain terms
+        words = set(re.findall(r'\w+', q_lower))
+        matched_domain_terms = words & IN_SCOPE_TERMS
+
+        elapsed_ms = (time.time() - t0) * 1000
+
+        if matched_domain_terms:
+            return True, "IN_SCOPE_ADMISSIONS", {
+                "matched_terms": list(matched_domain_terms)[:5],
+                "matched_count": len(matched_domain_terms),
+                "latency_ms": round(elapsed_ms, 3),
+                "action": "PASSED"
+            }
+
+        # 3. If zero academic domain terms were found, classify as out of scope
+        return False, "NO_ACADEMIC_DOMAIN_SIGNALS", {
+            "matched_terms": [],
+            "matched_count": 0,
+            "latency_ms": round(elapsed_ms, 3),
+            "action": "BLOCKED"
+        }

@@ -11,7 +11,7 @@ from opentelemetry import trace
 from src.agent.retriever import FAISSRetriever
 from src.agent.generator import LocalQwenGenerator
 from src.agent.fast_path import StructuredFastPathEngine
-from src.agent.normalizer import QueryNormalizer
+from src.agent.normalizer import QueryNormalizer, DomainScopeGuardrail
 from src.agentops.telemetry import tracer, tracker
 from src.agentops.evaluator import SemanticEvaluator
 from src.config import AGENTOPS_ENABLED
@@ -22,6 +22,7 @@ retriever = FAISSRetriever()
 generator = LocalQwenGenerator()
 fast_engine = StructuredFastPathEngine()
 normalizer = QueryNormalizer()
+guardrail = DomainScopeGuardrail()
 evaluator = SemanticEvaluator(embedding_model=retriever.model)
 
 class QueryRequest(BaseModel):
@@ -71,6 +72,64 @@ async def handle_query(request: QueryRequest):
                 val_span.set_attribute("query.synonyms_applied", json.dumps(norm_meta["synonyms_applied"]))
             
         try:
+            # --- Pre-Execution Domain Scope Guardrail ---
+            # Intercepts out-of-scope queries in < 1ms to prevent wasting FAISS vector search & LLM inference compute
+            with tracer.start_as_current_span("guardrail.evaluation") as guard_span:
+                in_scope, scope_reason, scope_meta = guardrail.evaluate_scope(normalized_query)
+                guard_span.set_attribute("guardrail.passed", in_scope)
+                guard_span.set_attribute("guardrail.reason", scope_reason)
+                guard_span.set_attribute("guardrail.latency_ms", scope_meta["latency_ms"])
+                
+                if not in_scope:
+                    guard_span.set_attribute("guardrail.action", "BLOCKED")
+                    guard_span.set_attribute("energy_saved_tokens", 150)
+                    guard_span.set_attribute("faiss_scans_prevented", 1)
+                    
+                    eval_metrics = {
+                        "faithfulness": 1.0,
+                        "context_relevance": 0.0,
+                        "answer_relevance": 0.0,
+                        "hallucination_detected": False,
+                        "grounding_status": "GUARDRAIL_BLOCKED"
+                    }
+                    
+                    clean_q = request.query.strip().rstrip("?").strip()
+                    blocked_answer = (
+                        "I can only help with college admissions, academic programs, fees, eligibility criteria, and campus policies.\n\n"
+                        f"Your question regarding **\"{clean_q}\"** is outside this domain. "
+                        "Please feel free to ask me anything related to courses, entrance exams, or admission details!"
+                    )
+                    
+                    tracker.emit_span(
+                        trace_id=trace_id,
+                        span_type="guardrail_deflection",
+                        start_time=trace_start,
+                        end_time=datetime.now(timezone.utc),
+                        status="success",
+                        metadata={"query": request.query, "reason": scope_reason, "energy_saved": True}
+                    )
+                    try:
+                        import httpx
+                        httpx.post(
+                            "http://127.0.0.1:5050/alert",
+                            json={
+                                "title": "AgentOps Guardrail: Out-of-Scope Query Deflected",
+                                "severity": "P3_INFO",
+                                "summary": f"Query '{request.query[:50]}' blocked by domain guardrail ({scope_reason}). Prevented LLM invocation & saved ~150 tokens.",
+                                "trace_id": trace_id
+                            },
+                            timeout=0.5
+                        )
+                    except Exception:
+                        pass
+                    
+                    return QueryResponse(
+                        trace_id=trace_id,
+                        answer=blocked_answer,
+                        context=[],
+                        eval_metrics=eval_metrics
+                    )
+
             # 0. SAGE-QA / Heliyon Fast-Path Deterministic Check
             # Sub-100ms bypass for structured queries (Counts, Entity Verification)
             fast_res = fast_engine.try_fast_query(normalized_query)

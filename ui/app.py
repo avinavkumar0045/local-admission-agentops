@@ -299,15 +299,24 @@ else:
                     faith = m.get("faithfulness", 0.0)
                     ctx_rel = m.get("context_relevance", 0.0)
                     status = m.get("grounding_status", "N/A")
-                    st.markdown(
-                        f"""<div class="eval-badge-line">
-                            <span>🛡️ AgentOps Grounding:</span>
-                            <span class="eval-badge-tag">Faithfulness: {faith:.2f}</span>
-                            <span class="eval-badge-tag">Relevance: {ctx_rel:.2f}</span>
-                            <span class="eval-badge-tag">Status: {status}</span>
-                        </div>""",
-                        unsafe_allow_html=True
-                    )
+                    if status == "GUARDRAIL_BLOCKED":
+                        st.markdown(
+                            """<div class="eval-badge-line" style="border-left: 3px solid #6366f1;">
+                                <span>🛡️ Scope Guard:</span>
+                                <span class="eval-badge-tag" style="background: rgba(99, 102, 241, 0.15); color: #a5b4fc;">Admissions Domain Active</span>
+                            </div>""",
+                            unsafe_allow_html=True
+                        )
+                    else:
+                        st.markdown(
+                            f"""<div class="eval-badge-line">
+                                <span>🛡️ AgentOps Grounding:</span>
+                                <span class="eval-badge-tag">Faithfulness: {faith:.2f}</span>
+                                <span class="eval-badge-tag">Relevance: {ctx_rel:.2f}</span>
+                                <span class="eval-badge-tag">Status: {status}</span>
+                            </div>""",
+                            unsafe_allow_html=True
+                        )
 
 # --- Chat Input & Execution ---
 chat_input_val = st.chat_input("Ask anything about college admissions...")
@@ -346,7 +355,10 @@ if chat_input_val:
                 hallucinated = eval_metrics.get("hallucination_detected", False) if eval_metrics else False
                 status_str = eval_metrics.get("grounding_status", "") if eval_metrics else ""
 
-                if hallucinated or faith < 0.70 or "HALLUCINATED" in status_str:
+                if status_str == "GUARDRAIL_BLOCKED":
+                    # Clean, polite out-of-scope handling: do not display an alarming incident banner to the student
+                    triggered_alert = None
+                elif hallucinated or faith < 0.70 or "HALLUCINATED" in status_str:
                     inc_id = f"INC-{str(uuid.uuid4())[:8].upper()}"
                     triggered_alert = {
                         "incident_id": inc_id,
@@ -391,15 +403,24 @@ if chat_input_val:
                     faith = eval_metrics.get("faithfulness", 0.0)
                     ctx_rel = eval_metrics.get("context_relevance", 0.0)
                     status = eval_metrics.get("grounding_status", "N/A")
-                    st.markdown(
-                        f"""<div class="eval-badge-line">
-                            <span>🛡️ AgentOps Grounding:</span>
-                            <span class="eval-badge-tag">Faithfulness: {faith:.2f}</span>
-                            <span class="eval-badge-tag">Relevance: {ctx_rel:.2f}</span>
-                            <span class="eval-badge-tag">Status: {status}</span>
-                        </div>""",
-                        unsafe_allow_html=True
-                    )
+                    if status == "GUARDRAIL_BLOCKED":
+                        st.markdown(
+                            """<div class="eval-badge-line" style="border-left: 3px solid #6366f1;">
+                                <span>🛡️ Scope Guard:</span>
+                                <span class="eval-badge-tag" style="background: rgba(99, 102, 241, 0.15); color: #a5b4fc;">Admissions Domain Active</span>
+                            </div>""",
+                            unsafe_allow_html=True
+                        )
+                    else:
+                        st.markdown(
+                            f"""<div class="eval-badge-line">
+                                <span>🛡️ AgentOps Grounding:</span>
+                                <span class="eval-badge-tag">Faithfulness: {faith:.2f}</span>
+                                <span class="eval-badge-tag">Relevance: {ctx_rel:.2f}</span>
+                                <span class="eval-badge-tag">Status: {status}</span>
+                            </div>""",
+                            unsafe_allow_html=True
+                        )
                             
                 st.session_state.messages.append({
                     "role": "assistant", 
