@@ -89,13 +89,17 @@ class StructuredFastPathEngine:
                 )
 
         # Pattern 2: Entity Lookup (Heliyon 2021 Section 4.5.2 shortest path on ontology graph)
-        # Check if query specifically asks about a known university
-        for r in self.records:
-            uname = r["clean_name"]
-            if len(uname) > 8 and uname in q:
-                return (
-                    f"{r['name']} is an officially listed {r['type']} located at {r['address']} as per official UGC records.",
-                    {"source": "Welcome to UGC, New Delhi, India.csv", "match_type": "DETERMINISTIC_ENTITY_LOOKUP", "entity": r["name"]}
-                )
+        # Only triggers if the query specifically asks about institutional address, location, or UGC recognition
+        is_registration_query = any(w in q for w in ["where is", "located", "address", "recognition", "recognized", "type of", "ugc status", "is it recognized", "headquarters"])
+        is_academic_query = any(w in q for w in ["program", "programs", "course", "courses", "fee", "fees", "eligib", "admission", "admissions", "scholarship", "syllabus", "law", "hotel", "catering", "engineering", "btech", "mtech", "mba", "placement", "hostel"])
+
+        if is_registration_query and not is_academic_query:
+            for r in self.records:
+                uname = r["clean_name"]
+                if len(uname) > 8 and uname in q:
+                    return (
+                        f"{r['name']} is an officially listed {r['type']} located at {r['address']} as per official UGC records.",
+                        {"source": "Welcome to UGC, New Delhi, India.csv", "match_type": "DETERMINISTIC_ENTITY_LOOKUP", "entity": r["name"]}
+                    )
 
         return None
