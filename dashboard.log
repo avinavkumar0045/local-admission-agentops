@@ -1,0 +1,13 @@
+INFO:     Started server process [41879]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:5050 (Press CTRL+C to quit)
+AgentOps Enterprise Dual-View Console running on http://localhost:5050
+
+🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴
+🚨 [AGENTOPS P3_INFO ALERT DISPATCHED] 🚨
+Title: AgentOps Alert: Semantic Grounding Degradation
+Detail: Query 'what are the different configuration and types in Hostel roo': Faithfulness (0.50) dipped below 0.70 threshold. | CAPS: 30.4
+Logged to Live Console on http://localhost:5050
+🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴
+

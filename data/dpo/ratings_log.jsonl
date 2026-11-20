@@ -1,0 +1,7 @@
+{"timestamp": "2026-11-20T09:25:10Z", "trace_id": "trace-golden-dean-001", "rating": 1, "notes": "Accurate dean name provided."}
+{"timestamp": "2026-11-20T09:27:30Z", "trace_id": "trace-golden-elig-002", "rating": 1, "notes": "Clear B.Tech PCM eligibility criteria."}
+{"timestamp": "2026-11-20T09:29:45Z", "trace_id": "trace-golden-hostel-003", "rating": 1, "notes": "Accurate hostel room fees."}
+{"timestamp": "2026-11-20T09:30:25Z", "trace_id": "test-trace-thumb-down-002", "rating": -1, "notes": "Tuition fee was stated as 3.5 Lakhs, but official SRM 2026 CSE fee is 4.75 Lakhs."}
+{"timestamp": "2026-11-20T15:18:25.638073+00:00", "trace_id": "c9aff60d-18d3-456e-8901-238267241a10", "rating": -1, "notes": "The name is not correct ."}
+{"timestamp": "2026-11-20T15:51:40.661432+00:00", "trace_id": "f7e536af-b50f-4f82-a2cf-73299b0d2e50", "rating": 1, "notes": null}
+{"timestamp": "2026-11-20T16:03:21.062001+00:00", "trace_id": "852504a7-11d0-4333-9b19-462cdea78bfc", "rating": 1, "notes": null}

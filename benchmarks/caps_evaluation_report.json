@@ -1,0 +1,207 @@
+{
+  "benchmark_summary": {
+    "total_samples": 10,
+    "tier_classification_accuracy_pct": 90.0,
+    "spearman_rank_correlation_rho": 0.9152,
+    "correlation_strength": "Very Strong Positive Correlation (r_s > 0.90)"
+  },
+  "ablation_study": {
+    "full_caps_model": {
+      "formula": "Phi = min(100, [0.4*I + 0.6*S]*B*U)",
+      "spearman_rho": 0.9152,
+      "tier_accuracy_pct": 90.0
+    },
+    "ablation_no_domain_liability_B": {
+      "formula": "Phi = [0.4*I + 0.6*S]*U",
+      "spearman_rho": 0.8788,
+      "impact_summary": "Without B (domain risk), non-statutory errors in campus trivia rank ahead of high-liability fees."
+    },
+    "ablation_naive_unweighted_baseline": {
+      "formula": "Score = 0.4*I + 0.6*S (Standard APM / RAG Triad)",
+      "spearman_rho": 0.8788,
+      "impact_summary": "Suffers from severe Queue Inversion; fails to prioritize user complaints and regulatory liability."
+    }
+  },
+  "detailed_test_case_results": [
+    {
+      "id": "TC-01",
+      "name": "Statutory Tuition Fee Hallucination with Human Flag",
+      "query": "What is the annual tuition fee for B.Tech CSE at SRM Kattankulathur?",
+      "caps_score": 97.4,
+      "calculated_severity": "P1_CRITICAL",
+      "expected_severity": "P1_CRITICAL",
+      "is_correct_tier": true,
+      "components": {
+        "I": 8.0,
+        "S": 72.0,
+        "B": 1.5,
+        "U": 1.4
+      },
+      "formula_repr": "min(100, [0.4\u00d78.0 + 0.6\u00d772.0] \u00d7 1.5 \u00d7 1.4) = 97.4",
+      "expected_expert_rank": 1,
+      "assigned_model_rank": 2
+    },
+    {
+      "id": "TC-02",
+      "name": "Fee Refund Regulatory Policy Violation",
+      "query": "What is the fee refund policy and penalty if I cancel admission after 30 days?",
+      "caps_score": 95.8,
+      "calculated_severity": "P1_CRITICAL",
+      "expected_severity": "P1_CRITICAL",
+      "is_correct_tier": true,
+      "components": {
+        "I": 4.5,
+        "S": 73.0,
+        "B": 1.5,
+        "U": 1.4
+      },
+      "formula_repr": "min(100, [0.4\u00d74.5 + 0.6\u00d773.0] \u00d7 1.5 \u00d7 1.4) = 95.8",
+      "expected_expert_rank": 2,
+      "assigned_model_rank": 3
+    },
+    {
+      "id": "TC-03",
+      "name": "Downstream Infrastructure Failure (Connection Timeout)",
+      "query": "Eligibility criteria for M.Tech admissions and entrance cutoff",
+      "caps_score": 98.4,
+      "calculated_severity": "P1_CRITICAL",
+      "expected_severity": "P1_CRITICAL",
+      "is_correct_tier": true,
+      "components": {
+        "I": 100.0,
+        "S": 70.0,
+        "B": 1.2,
+        "U": 1.0
+      },
+      "formula_repr": "min(100, [0.4\u00d7100.0 + 0.6\u00d770.0] \u00d7 1.2 \u00d7 1.0) = 98.4",
+      "expected_expert_rank": 3,
+      "assigned_model_rank": 1
+    },
+    {
+      "id": "TC-04",
+      "name": "Academic Eligibility Cutoff Hallucination",
+      "query": "What is the minimum JEE Main percentile cutoff for CSE core admission?",
+      "caps_score": 49.9,
+      "calculated_severity": "P2_WARNING",
+      "expected_severity": "P2_WARNING",
+      "is_correct_tier": true,
+      "components": {
+        "I": 1.2,
+        "S": 57.0,
+        "B": 1.2,
+        "U": 1.2
+      },
+      "formula_repr": "min(100, [0.4\u00d71.2 + 0.6\u00d757.0] \u00d7 1.2 \u00d7 1.2) = 49.9",
+      "expected_expert_rank": 4,
+      "assigned_model_rank": 4
+    },
+    {
+      "id": "TC-05",
+      "name": "SRMJEEE Exam Registration Deadline Drift",
+      "query": "When is the last date to submit the application form for SRMJEEE phase 2?",
+      "caps_score": 16.9,
+      "calculated_severity": "P3_INFO",
+      "expected_severity": "P2_WARNING",
+      "is_correct_tier": false,
+      "components": {
+        "I": 0.0,
+        "S": 23.5,
+        "B": 1.2,
+        "U": 1.0
+      },
+      "formula_repr": "min(100, [0.4\u00d70.0 + 0.6\u00d723.5] \u00d7 1.2 \u00d7 1.0) = 16.9",
+      "expected_expert_rank": 5,
+      "assigned_model_rank": 5
+    },
+    {
+      "id": "TC-06",
+      "name": "Campus Amenities (Gymnasium Hours) Minor Drift",
+      "query": "What are the operational hours of the university gymnasium and sports complex?",
+      "caps_score": 11.5,
+      "calculated_severity": "P3_INFO",
+      "expected_severity": "P3_INFO",
+      "is_correct_tier": true,
+      "components": {
+        "I": 0.0,
+        "S": 24.0,
+        "B": 0.8,
+        "U": 1.0
+      },
+      "formula_repr": "min(100, [0.4\u00d70.0 + 0.6\u00d724.0] \u00d7 0.8 \u00d7 1.0) = 11.5",
+      "expected_expert_rank": 6,
+      "assigned_model_rank": 7
+    },
+    {
+      "id": "TC-07",
+      "name": "Student Club Life & Cultural Activities Trivia",
+      "query": "How many technical and cultural student clubs are active on campus?",
+      "caps_score": 13.9,
+      "calculated_severity": "P3_INFO",
+      "expected_severity": "P3_INFO",
+      "is_correct_tier": true,
+      "components": {
+        "I": 0.0,
+        "S": 29.0,
+        "B": 0.8,
+        "U": 1.0
+      },
+      "formula_repr": "min(100, [0.4\u00d70.0 + 0.6\u00d729.0] \u00d7 0.8 \u00d7 1.0) = 13.9",
+      "expected_expert_rank": 7,
+      "assigned_model_rank": 6
+    },
+    {
+      "id": "TC-08",
+      "name": "Faculty Directory Verification Query",
+      "query": "Who is the Head of Department for Artificial Intelligence and Data Science?",
+      "caps_score": 4.3,
+      "calculated_severity": "P3_INFO",
+      "expected_severity": "P3_INFO",
+      "is_correct_tier": true,
+      "components": {
+        "I": 0.0,
+        "S": 9.0,
+        "B": 0.8,
+        "U": 1.0
+      },
+      "formula_repr": "min(100, [0.4\u00d70.0 + 0.6\u00d79.0] \u00d7 0.8 \u00d7 1.0) = 4.3",
+      "expected_expert_rank": 8,
+      "assigned_model_rank": 9
+    },
+    {
+      "id": "TC-09",
+      "name": "High-Liability Fee Query with Perfect Grounding & Student Thumbs-Up",
+      "query": "What is the one-time registration fee for B.Tech programs?",
+      "caps_score": 0.5,
+      "calculated_severity": "P3_INFO",
+      "expected_severity": "P3_INFO",
+      "is_correct_tier": true,
+      "components": {
+        "I": 0.0,
+        "S": 1.0,
+        "B": 1.5,
+        "U": 0.6
+      },
+      "formula_repr": "min(100, [0.4\u00d70.0 + 0.6\u00d71.0] \u00d7 1.5 \u00d7 0.6) = 0.5",
+      "expected_expert_rank": 9,
+      "assigned_model_rank": 10
+    },
+    {
+      "id": "TC-10",
+      "name": "Tier 0 Pre-Execution Domain Scope Guardrail Drop",
+      "query": "How do I bake a chocolate cake at home?",
+      "caps_score": 9.6,
+      "calculated_severity": "P3_INFO",
+      "expected_severity": "P3_INFO",
+      "is_correct_tier": true,
+      "components": {
+        "I": 0.0,
+        "S": 20.0,
+        "B": 0.8,
+        "U": 1.0
+      },
+      "formula_repr": "min(100, [0.4\u00d70.0 + 0.6\u00d720.0] \u00d7 0.8 \u00d7 1.0) = 9.6",
+      "expected_expert_rank": 10,
+      "assigned_model_rank": 8
+    }
+  ]
+}

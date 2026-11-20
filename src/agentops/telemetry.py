@@ -42,37 +42,50 @@ class TelemetryTracker:
     def __init__(self):
         self.enabled = AGENTOPS_ENABLED
         self.conn = None
-        if self.enabled:
-            try:
-                self.conn = mysql.connector.connect(
-                    host=DB_HOST,
-                    user=DB_USER,
-                    password=DB_PASSWORD,
-                    database=DB_NAME
-                )
-                self.conn.autocommit = True
-            except Exception as e:
-                self.enabled = False
+
+    def _get_connection(self):
+        if not self.enabled:
+            return None
+        try:
+            if self.conn is not None:
+                self.conn.ping(reconnect=True, attempts=3, delay=1)
+                return self.conn
+        except Exception:
+            self.conn = None
+        try:
+            self.conn = mysql.connector.connect(
+                host=DB_HOST,
+                user=DB_USER,
+                password=DB_PASSWORD,
+                database=DB_NAME
+            )
+            self.conn.autocommit = True
+            return self.conn
+        except Exception as e:
+            self.conn = None
+            return None
 
     def emit_span(self, trace_id, span_type, start_time, end_time, status="success", error_msg=None, metadata=None):
-        if not self.enabled or not self.conn: return
+        conn = self._get_connection()
+        if not conn: return
         span_id = str(uuid.uuid4())
         duration_ms = (end_time - start_time).total_seconds() * 1000
         metadata_str = json.dumps(metadata) if metadata else None
         self._ensure_trace_exists(trace_id)
         try:
-            cursor = self.conn.cursor()
+            cursor = conn.cursor()
             query = """INSERT INTO spans (span_id, trace_id, span_type, start_time, end_time, duration_ms, status, error_message, metadata) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)"""
             cursor.execute(query, (span_id, trace_id, span_type, start_time, end_time, duration_ms, status, error_msg, metadata_str))
             cursor.close()
         except: pass
 
     def record_semantic_evaluation(self, trace_id, eval_data):
-        if not self.enabled or not self.conn: return
+        conn = self._get_connection()
+        if not conn: return
         eval_id = str(uuid.uuid4())
         self._ensure_trace_exists(trace_id)
         try:
-            cursor = self.conn.cursor()
+            cursor = conn.cursor()
             query = """
                 INSERT INTO semantic_evaluations 
                 (eval_id, trace_id, faithfulness, context_relevance, answer_relevance, hallucination_detected, grounding_status)
@@ -91,9 +104,10 @@ class TelemetryTracker:
         except: pass
 
     def record_user_feedback(self, trace_id, rating, notes=None):
-        if not self.enabled or not self.conn: return
+        conn = self._get_connection()
+        if not conn: return
         try:
-            cursor = self.conn.cursor()
+            cursor = conn.cursor()
             query = """
                 UPDATE semantic_evaluations 
                 SET user_feedback = %s, feedback_notes = %s 
@@ -104,8 +118,10 @@ class TelemetryTracker:
         except: pass
 
     def _ensure_trace_exists(self, trace_id):
+        conn = self._get_connection()
+        if not conn: return
         try:
-            cursor = self.conn.cursor()
+            cursor = conn.cursor()
             cursor.execute("SELECT trace_id FROM traces WHERE trace_id = %s", (trace_id,))
             if not cursor.fetchone():
                 cursor.execute("INSERT INTO sessions (session_id) VALUES (%s)", (trace_id,))
