@@ -50,6 +50,17 @@ OPERATIONS_METRICS = {
     "llm_p50_latency_s": 9.4,
     "llm_p95_latency_s": 14.8,
     "llm_p99_latency_s": 22.1,
+    "guardrails": {
+        "denied_topics": {"rate_pct": 35.7, "count": 20, "label": "Domain Scope Guardrail", "status": "ACTIVE_POLICY"},
+        "prompt_injection": {"rate_pct": 0.0, "count": 0, "label": "Prompt Safety & Jailbreak", "status": "ZERO_EXPLOITS"},
+        "pii_redaction": {"rate_pct": 0.0, "count": 0, "label": "Student PII & Privacy Filter", "status": "COMPLIANCE_PASS"},
+        "grounding_sla": {"rate_pct": 3.6, "count": 2, "label": "Semantic Grounding Violations", "status": "SLA_ALERTS_DISPATCHED"}
+    },
+    "execution_distribution": [
+        {"name": "Tier 0: Domain Scope Guardrail Drop", "sub": "Zero-Compute Pre-Execution Interception", "requests": 20, "pct": 35.7, "latency": "1.1 ms", "tokens": "0", "color": "#06B6D4"},
+        {"name": "Tier 1: Fast-Path Deterministic Registry", "sub": "SAGE-QA Institutional Cache & Metadata", "requests": 12, "pct": 21.4, "latency": "0.8 ms", "tokens": "0", "color": "#10B981"},
+        {"name": "Tier 2: Full Agentic RAG Pipeline", "sub": "FAISS Retrieval (7,937 Chunks) + Local Qwen 7B Inference", "requests": 24, "pct": 42.9, "latency": "9.4 s", "tokens": "22,480", "color": "#8B5CF6"}
+    ],
     "services": {
         "fastapi": {"status": "HEALTHY", "port": 8000, "detail": "Uvicorn HTTP Gateway Active"},
         "faiss": {"status": "HEALTHY", "detail": "7,937 Chunks (42 PDFs/TXTs) Indexed"},
@@ -677,6 +688,129 @@ HTML_CONTENT = """
             border: 1px solid rgba(16, 185, 129, 0.3);
         }
 
+        /* --- Execution Engine Distribution (AWS CloudWatch Style) --- */
+        .engine-bar-container {
+            display: flex;
+            flex-direction: column;
+            gap: 1.1rem;
+            margin-top: 0.5rem;
+        }
+
+        .engine-row {
+            display: grid;
+            grid-template-columns: 280px 1fr 180px;
+            align-items: center;
+            gap: 1.5rem;
+            padding: 0.6rem 0.8rem;
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid rgba(255, 255, 255, 0.04);
+            transition: all 0.2s ease;
+        }
+
+        .engine-row:hover {
+            background: rgba(255, 255, 255, 0.04);
+            border-color: rgba(255, 255, 255, 0.08);
+        }
+
+        .engine-label-wrap {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .engine-name {
+            font-size: 0.86rem;
+            font-weight: 700;
+            color: #F8FAFC;
+        }
+
+        .engine-tier {
+            font-size: 0.74rem;
+            color: var(--text-muted);
+        }
+
+        .engine-bar-track {
+            width: 100%;
+            height: 20px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 6px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .engine-bar-fill {
+            height: 100%;
+            border-radius: 6px;
+            transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            align-items: center;
+            padding-left: 10px;
+            font-size: 0.72rem;
+            font-weight: 800;
+            color: #FFFFFF;
+            letter-spacing: 0.02em;
+        }
+
+        .engine-meta {
+            text-align: right;
+            font-size: 0.78rem;
+            color: var(--text-secondary);
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        /* --- 4-Pillar Service Quality & Guardrail Matrix (AWS Bedrock Style) --- */
+        .guardrail-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1.2rem;
+            margin-bottom: 2rem;
+        }
+
+        .guardrail-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-glass);
+            border-radius: 12px;
+            padding: 1.4rem;
+            position: relative;
+            backdrop-filter: blur(12px);
+            transition: all 0.2s ease;
+        }
+
+        .guardrail-card:hover {
+            border-color: rgba(255, 255, 255, 0.18);
+            transform: translateY(-2px);
+        }
+
+        .badge-pill {
+            font-size: 0.68rem;
+            font-weight: 800;
+            padding: 3px 9px;
+            border-radius: 9999px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .badge-pass {
+            background: rgba(16, 185, 129, 0.15);
+            color: #34D399;
+            border: 1px solid rgba(16, 185, 129, 0.3);
+        }
+
+        .badge-warn {
+            background: rgba(245, 158, 11, 0.15);
+            color: #FCD34D;
+            border: 1px solid rgba(245, 158, 11, 0.3);
+        }
+
+        .badge-active {
+            background: rgba(99, 102, 241, 0.15);
+            color: #A5B4FC;
+            border: 1px solid rgba(99, 102, 241, 0.3);
+        }
+
         /* --- Developer Console (AWS OpsCenter Issue Board) --- */
         .filter-ribbon {
             display: flex;
@@ -1009,6 +1143,145 @@ HTML_CONTENT = """
             </div>
         </div>
 
+        <!-- Upgrade 2: Query Execution Path & Engine Distribution (AWS CloudWatch Model Lens) -->
+        <div class="ops-panel" style="margin-bottom: 2rem;">
+            <div class="ops-panel-title">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <span style="font-size: 1.15rem;">☁️</span>
+                    <span>Query Execution Path & Engine Distribution</span>
+                    <span class="brand-badge" style="background: rgba(99,102,241,0.15); color: #818CF8;">AWS CloudWatch Model Lens</span>
+                </div>
+                <span style="font-size: 0.76rem; color: #94A3B8;">Multi-Tier Routing Breakdown (56 Total Requests)</span>
+            </div>
+
+            <div class="engine-bar-container">
+                <!-- Tier 0: Guardrail Drop -->
+                <div class="engine-row">
+                    <div class="engine-label-wrap">
+                        <span class="engine-name">Tier 0: Domain Scope Guardrail Drop</span>
+                        <span class="engine-tier">Zero-Compute Pre-Execution Interception</span>
+                    </div>
+                    <div class="engine-bar-track">
+                        <div class="engine-bar-fill" style="width: 35.7%; background: linear-gradient(90deg, #06B6D4, #38BDF8);">
+                            35.7% (20 req)
+                        </div>
+                    </div>
+                    <div class="engine-meta">
+                        <span style="color: #38BDF8; font-weight: 700;">1.1 ms avg</span>
+                        <span>0 tokens · 0 FAISS scans</span>
+                    </div>
+                </div>
+
+                <!-- Tier 1: Fast-Path Registry -->
+                <div class="engine-row">
+                    <div class="engine-label-wrap">
+                        <span class="engine-name">Tier 1: Fast-Path Deterministic Registry</span>
+                        <span class="engine-tier">SAGE-QA Institutional Cache & Metadata</span>
+                    </div>
+                    <div class="engine-bar-track">
+                        <div class="engine-bar-fill" style="width: 21.4%; background: linear-gradient(90deg, #10B981, #34D399);">
+                            21.4% (12 req)
+                        </div>
+                    </div>
+                    <div class="engine-meta">
+                        <span style="color: #34D399; font-weight: 700;">0.8 ms avg</span>
+                        <span>0 tokens · Sub-1ms bypass</span>
+                    </div>
+                </div>
+
+                <!-- Tier 2: Full RAG Pipeline -->
+                <div class="engine-row">
+                    <div class="engine-label-wrap">
+                        <span class="engine-name">Tier 2: Full Agentic RAG Pipeline</span>
+                        <span class="engine-tier">FAISS Retrieval (7,937 Chunks) + Local Qwen 7B</span>
+                    </div>
+                    <div class="engine-bar-track">
+                        <div class="engine-bar-fill" style="width: 42.9%; background: linear-gradient(90deg, #6366F1, #8B5CF6);">
+                            42.9% (24 req)
+                        </div>
+                    </div>
+                    <div class="engine-meta">
+                        <span style="color: #A5B4FC; font-weight: 700;">9.4 s avg (P50)</span>
+                        <span>22,480 tokens · Full RAG</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Upgrade 1: Service Quality & Guardrail Defense (AWS Bedrock Standard) -->
+        <div style="margin-bottom: 2rem;">
+            <div class="section-header" style="margin-bottom: 1rem;">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <span style="font-size: 1.15rem;">🛡️</span>
+                    <h2 class="section-title">Service Quality & Guardrail Defense</h2>
+                    <span class="brand-badge" style="background: rgba(16, 185, 129, 0.15); color: #34D399;">AWS Bedrock Standard</span>
+                </div>
+                <span style="font-size: 0.78rem; color: #94A3B8;">4-Pillar Safety, Privacy & Factual Alignment Matrix</span>
+            </div>
+
+            <div class="guardrail-grid">
+                <!-- Pillar 1: Denied Topics -->
+                <div class="guardrail-card">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
+                        <span class="metric-label" style="margin-bottom: 0;">Denied Topics (Off-Domain)</span>
+                        <span class="badge-pill badge-active">ACTIVE POLICY</span>
+                    </div>
+                    <div class="metric-val" style="color: #60A5FA;" id="guardrail-denied-pct">35.7%</div>
+                    <div class="metric-sub" style="margin-bottom: 0.5rem;">
+                        <span class="highlight" id="guardrail-denied-count">20</span> filtered non-admission queries
+                    </div>
+                    <div style="font-size: 0.72rem; color: #64748B; border-top: 1px solid rgba(255,255,255,0.06); padding-top: 6px;">
+                        Pre-execution guardrail drops general trivia in &lt;2ms
+                    </div>
+                </div>
+
+                <!-- Pillar 2: Prompt Injection / Toxicity -->
+                <div class="guardrail-card">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
+                        <span class="metric-label" style="margin-bottom: 0;">Prompt Injection & Toxicity</span>
+                        <span class="badge-pill badge-pass">ZERO EXPLOITS</span>
+                    </div>
+                    <div class="metric-val" style="color: #34D399;" id="guardrail-injection-pct">0.00%</div>
+                    <div class="metric-sub" style="margin-bottom: 0.5rem;">
+                        <span style="color: #34D399; font-weight: 600;">0</span> adversarial jailbreaks detected
+                    </div>
+                    <div style="font-size: 0.72rem; color: #64748B; border-top: 1px solid rgba(255,255,255,0.06); padding-top: 6px;">
+                        Input sanitizer guards system instructions & prompt extraction
+                    </div>
+                </div>
+
+                <!-- Pillar 3: Student PII & Privacy -->
+                <div class="guardrail-card">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
+                        <span class="metric-label" style="margin-bottom: 0;">Student PII & Privacy Filter</span>
+                        <span class="badge-pill badge-pass">COMPLIANCE PASS</span>
+                    </div>
+                    <div class="metric-val" style="color: #34D399;" id="guardrail-pii-pct">0.00%</div>
+                    <div class="metric-sub" style="margin-bottom: 0.5rem;">
+                        <span style="color: #34D399; font-weight: 600;">0</span> leaked student identifiers
+                    </div>
+                    <div style="font-size: 0.72rem; color: #64748B; border-top: 1px solid rgba(255,255,255,0.06); padding-top: 6px;">
+                        Regex masking for Aadhaar, phone numbers & application IDs
+                    </div>
+                </div>
+
+                <!-- Pillar 4: Factual Grounding & Hallucination SLA -->
+                <div class="guardrail-card">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
+                        <span class="metric-label" style="margin-bottom: 0;">Factual Grounding SLA</span>
+                        <span class="badge-pill badge-warn">SLA ALERTS</span>
+                    </div>
+                    <div class="metric-val" style="color: #F59E0B;" id="guardrail-grounding-pct">3.57%</div>
+                    <div class="metric-sub" style="margin-bottom: 0.5rem;">
+                        <span style="color: #F59E0B; font-weight: 600;" id="guardrail-grounding-count">2</span> SLA breaches (&lt;0.70 Faithfulness)
+                    </div>
+                    <div style="font-size: 0.72rem; color: #64748B; border-top: 1px solid rgba(255,255,255,0.06); padding-top: 6px;">
+                        Evaluator-Critic audits generated claims against FAISS context
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- 2-Column: Latency Performance Waterfall + Subsystem Matrix -->
         <div class="ops-details-grid">
             <!-- Latency Waterfall -->
@@ -1190,6 +1463,24 @@ HTML_CONTENT = """
                 if (document.getElementById('metric-blocked-ratio-text')) {
                     document.getElementById('metric-blocked-ratio-text').innerText = `${data.guardrail_deflections} out-of-context`;
                 }
+
+                // Guardrail 4-pillar bindings (AWS Bedrock Standard)
+                if (data.guardrails) {
+                    if (document.getElementById('guardrail-denied-pct')) {
+                        document.getElementById('guardrail-denied-pct').innerText = `${data.guardrails.denied_topics.rate_pct}%`;
+                        document.getElementById('guardrail-denied-count').innerText = data.guardrails.denied_topics.count;
+                    }
+                    if (document.getElementById('guardrail-injection-pct')) {
+                        document.getElementById('guardrail-injection-pct').innerText = `${data.guardrails.prompt_injection.rate_pct.toFixed(2)}%`;
+                    }
+                    if (document.getElementById('guardrail-pii-pct')) {
+                        document.getElementById('guardrail-pii-pct').innerText = `${data.guardrails.pii_redaction.rate_pct.toFixed(2)}%`;
+                    }
+                    if (document.getElementById('guardrail-grounding-pct')) {
+                        document.getElementById('guardrail-grounding-pct').innerText = `${data.guardrails.grounding_sla.rate_pct}%`;
+                        document.getElementById('guardrail-grounding-count').innerText = data.guardrails.grounding_sla.count;
+                    }
+                }
             } catch (e) {
                 console.error("Ops fetch error:", e);
             }
@@ -1215,7 +1506,7 @@ HTML_CONTENT = """
 
             const unreadCount = firing.length;
             // WhatsApp style dynamic title badge: (N) AgentDashboard ☯︎
-            document.title = (unreadCount > 0 ? `(${unreadCount}) ` : "") + "Agent Dashboard ";
+            document.title = (unreadCount > 0 ? `(${unreadCount}) ` : "") + "AgentDashboard ☯︎";
 
             const badge = document.getElementById('header-unread-badge');
             if (badge) {

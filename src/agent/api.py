@@ -79,11 +79,14 @@ async def handle_query(request: QueryRequest):
                 guard_span.set_attribute("guardrail.passed", in_scope)
                 guard_span.set_attribute("guardrail.reason", scope_reason)
                 guard_span.set_attribute("guardrail.latency_ms", scope_meta["latency_ms"])
+                guard_span.set_attribute("gen_ai.guardrail.policy.name", "domain_scope.admissions")
+                guard_span.set_attribute("gen_ai.guardrail.action", "denied_topic" if not in_scope else "passed")
                 
                 if not in_scope:
                     guard_span.set_attribute("guardrail.action", "BLOCKED")
                     guard_span.set_attribute("energy_saved_tokens", 150)
                     guard_span.set_attribute("faiss_scans_prevented", 1)
+                    guard_span.set_attribute("gen_ai.guardrail.tokens_saved", 150)
                     
                     eval_metrics = {
                         "faithfulness": 1.0,
@@ -184,6 +187,13 @@ async def handle_query(request: QueryRequest):
             )
 
             with tracer.start_as_current_span("grounding.validation") as ground_span:
+                # OpenTelemetry GenAI Semantic Conventions (CNCF Standard)
+                ground_span.set_attribute("gen_ai.evaluation.faithfulness", eval_metrics["faithfulness"])
+                ground_span.set_attribute("gen_ai.evaluation.context_relevance", eval_metrics["context_relevance"])
+                ground_span.set_attribute("gen_ai.evaluation.hallucination_detected", eval_metrics["hallucination_detected"])
+                ground_span.set_attribute("gen_ai.evaluation.status", eval_metrics["grounding_status"])
+                
+                # Backward-compatible attributes
                 ground_span.set_attribute("faithfulness_score", eval_metrics["faithfulness"])
                 ground_span.set_attribute("context_relevance", eval_metrics["context_relevance"])
                 ground_span.set_attribute("answer_relevance", eval_metrics["answer_relevance"])

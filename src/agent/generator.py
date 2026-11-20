@@ -14,12 +14,21 @@ class LocalQwenGenerator:
         start_time = datetime.now(timezone.utc)
         
         with tracer.start_as_current_span("llm.generation") as gen_span:
+            # OpenTelemetry GenAI Semantic Conventions (CNCF Standard)
+            gen_span.set_attribute("gen_ai.system", "ollama")
+            gen_span.set_attribute("gen_ai.operation.name", "chat")
+            gen_span.set_attribute("gen_ai.request.model", self.model_name)
+            gen_span.set_attribute("gen_ai.request.temperature", 0.2)
+            gen_span.set_attribute("gen_ai.request.max_tokens", 100)
+            
+            # Backward-compatible attribute
             gen_span.set_attribute("model", self.model_name)
             
             with tracer.start_as_current_span("prompt.construction") as prompt_span:
                 context_texts = "\n\n".join([c["content"] for c in context]) if context else "No direct context available in knowledge base."
                 prompt = build_prompt(query=query, context_texts=context_texts)
                 prompt_span.set_attribute("prompt_length", len(prompt))
+                prompt_span.set_attribute("gen_ai.prompt.characters", len(prompt))
             
             payload = {
                 "model": self.model_name,
@@ -37,7 +46,21 @@ class LocalQwenGenerator:
                     response.raise_for_status()
                     result = response.json()
                     answer = result.get("response", "Error generating response.")
-                    gen_span.set_attribute("completion_tokens", result.get("eval_count", 0))
+                    
+                    # Token Accounting via GenAI Semantic Conventions
+                    prompt_tokens = result.get("prompt_eval_count", len(prompt) // 4)
+                    completion_tokens = result.get("eval_count", 0)
+                    total_tokens = prompt_tokens + completion_tokens
+                    duration_ms = (datetime.now(timezone.utc) - start_time).total_seconds() * 1000
+                    
+                    gen_span.set_attribute("gen_ai.response.model", result.get("model", self.model_name))
+                    gen_span.set_attribute("gen_ai.client.token.usage.prompt", prompt_tokens)
+                    gen_span.set_attribute("gen_ai.client.token.usage.completion", completion_tokens)
+                    gen_span.set_attribute("gen_ai.client.token.usage.total", total_tokens)
+                    gen_span.set_attribute("gen_ai.client.operation.duration_ms", duration_ms)
+                    
+                    # Backward-compatible attribute
+                    gen_span.set_attribute("completion_tokens", completion_tokens)
                     
                     tracker.emit_span(trace_id, "llm_generation", start_time, datetime.now(timezone.utc), "success")
                     return answer
