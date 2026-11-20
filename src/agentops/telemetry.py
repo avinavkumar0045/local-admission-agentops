@@ -20,7 +20,11 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 from src.config import AGENTOPS_ENABLED, DB_HOST, DB_USER, DB_PASSWORD, DB_NAME
 
 if AGENTOPS_ENABLED:
-    resource = Resource(attributes={"service.name": "admission-agent"})
+    resource = Resource(attributes={
+        "service.name": "admission-agent",
+        "gen_ai.system": "ollama",
+        "service.version": "2.1.0"
+    })
     provider = TracerProvider(resource=resource)
     
     # Export to the local OTel Collector (via gRPC on 4317)
