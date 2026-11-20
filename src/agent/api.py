@@ -2,6 +2,10 @@
 FastAPI Orchestrator
 Primary Responsibility: Exposes the HTTP endpoints for the admission assistant.
 """
+import os
+os.environ["TOKENIZERS_PARALLELISM"] = "false"
+os.environ["OMP_NUM_THREADS"] = "1"
+
 import uuid
 from datetime import datetime, timezone
 from fastapi import FastAPI, HTTPException
@@ -12,8 +16,10 @@ from src.agent.retriever import FAISSRetriever
 from src.agent.generator import LocalQwenGenerator
 from src.agent.fast_path import StructuredFastPathEngine
 from src.agent.normalizer import QueryNormalizer, DomainScopeGuardrail
+from typing import Optional, List, Dict, Any
 from src.agentops.telemetry import tracer, tracker
 from src.agentops.evaluator import SemanticEvaluator
+from src.agentops.dpo_collector import dpo_collector
 from src.config import AGENTOPS_ENABLED
 
 app = FastAPI(title="AgentOps Admission API")
@@ -31,7 +37,11 @@ class QueryRequest(BaseModel):
 class FeedbackRequest(BaseModel):
     trace_id: str
     rating: int  # 1 for thumbs up, -1 for thumbs down
-    notes: str = None
+    notes: Optional[str] = None
+    prompt: Optional[str] = ""
+    rejected_answer: Optional[str] = ""
+    context: Optional[List[Dict[str, Any]]] = None
+    faithfulness: Optional[float] = 0.0
 
 class QueryResponse(BaseModel):
     trace_id: str
@@ -97,11 +107,37 @@ async def handle_query(request: QueryRequest):
                     }
                     
                     clean_q = request.query.strip().rstrip("?").strip()
-                    blocked_answer = (
-                        "I can only help with college admissions, academic programs, fees, eligibility criteria, and campus policies.\n\n"
-                        f"Your question regarding **\"{clean_q}\"** is outside this domain. "
-                        "Please feel free to ask me anything related to courses, entrance exams, or admission details!"
-                    )
+                    if scope_reason == "SECURITY_PROMPT_INJECTION_BLOCKED":
+                        blocked_answer = (
+                            "⚠️ **Security Guardrail Triggered:** System instruction override or prompt injection attempt detected. "
+                            "As an institutional admissions assistant, I strictly operate within official academic guidelines.\n\n"
+                            "Please ask any legitimate question regarding admissions, programs, eligibility, or fees."
+                        )
+                        alert_title = "AgentOps Security: Prompt Injection Intercepted"
+                        status_tag = "SECURITY_BLOCKED"
+                    elif scope_reason == "TOXICITY_POLICY_VIOLATION":
+                        blocked_answer = (
+                            "🛡️ **Content Moderation Policy:** Inappropriate, abusive, or profane language is strictly prohibited. "
+                            "Please keep your queries respectful and focused on university admissions."
+                        )
+                        alert_title = "AgentOps Safety: Toxic / Abusive Content Deflected"
+                        status_tag = "TOXICITY_BLOCKED"
+                    else:
+                        blocked_answer = (
+                            "I can only help with college admissions, academic programs, fees, eligibility criteria, and campus policies.\n\n"
+                            f"Your question regarding **\"{clean_q}\"** is outside this domain. "
+                            "Please feel free to ask me anything related to courses, entrance exams, or admission details!"
+                        )
+                        alert_title = "AgentOps Guardrail: Out-of-Scope Query Deflected"
+                        status_tag = "GUARDRAIL_BLOCKED"
+
+                    eval_metrics = {
+                        "faithfulness": 1.0,
+                        "context_relevance": 0.0,
+                        "answer_relevance": 0.0,
+                        "hallucination_detected": False,
+                        "grounding_status": status_tag
+                    }
                     
                     tracker.emit_span(
                         trace_id=trace_id,
@@ -109,17 +145,19 @@ async def handle_query(request: QueryRequest):
                         start_time=trace_start,
                         end_time=datetime.now(timezone.utc),
                         status="success",
-                        metadata={"query": request.query, "reason": scope_reason, "energy_saved": True}
+                        metadata={"query": request.query, "reason": scope_reason, "category": scope_meta.get("category", "DOMAIN_SCOPE"), "energy_saved": True}
                     )
                     try:
                         import httpx
                         httpx.post(
                             "http://127.0.0.1:5050/alert",
                             json={
-                                "title": "AgentOps Guardrail: Out-of-Scope Query Deflected",
+                                "title": alert_title,
                                 "severity": "P3_INFO",
-                                "summary": f"Query '{request.query[:50]}' blocked by domain guardrail ({scope_reason}). Prevented LLM invocation & saved ~150 tokens.",
-                                "trace_id": trace_id
+                                "summary": f"Query '{request.query[:50]}' blocked by guardrail ({scope_reason}). Prevented LLM invocation & saved ~150 tokens.",
+                                "trace_id": trace_id,
+                                "query": request.query,
+                                "is_fatal": False
                             },
                             timeout=0.5
                         )
@@ -252,16 +290,91 @@ async def handle_query(request: QueryRequest):
                 error_msg=str(e),
                 metadata={"query": request.query}
             )
+            # Dispatch immediate P1 Fatal Incident to Operations Webhook (port 5050)
+            try:
+                import httpx
+                httpx.post(
+                    "http://127.0.0.1:5050/alert",
+                    json={
+                        "title": "AgentOps Alert: Critical Service Disruption",
+                        "severity": "P1_CRITICAL",
+                        "summary": f"Fatal unhandled exception during query execution: {str(e)[:120]}",
+                        "trace_id": trace_id,
+                        "query": request.query,
+                        "is_fatal": True,
+                        "latency_s": (datetime.now(timezone.utc) - trace_start).total_seconds()
+                    },
+                    timeout=0.6
+                )
+            except Exception:
+                pass
             raise HTTPException(status_code=500, detail="Internal Server Error during processing.")
 
 @app.post("/feedback")
 async def handle_feedback(request: FeedbackRequest):
     """
     Receives user feedback (thumbs up/down + notes) tied to a trace_id.
+    If rating == -1 (thumbs down), automatically curates a DPO training pair in HuggingFace TRL format.
     """
     tracker.record_user_feedback(
         trace_id=request.trace_id,
         rating=request.rating,
         notes=request.notes
     )
-    return {"status": "success", "trace_id": request.trace_id, "rating": request.rating}
+    
+    # Persist all ratings to resilient disk audit log for CSAT metrics
+    dpo_collector.record_rating(
+        trace_id=request.trace_id,
+        rating=request.rating,
+        notes=request.notes
+    )
+
+    # Reactive CAPS Update: Notify Port 5050 SRE console to recalculate priority score live
+    try:
+        import httpx
+        httpx.post(
+            "http://127.0.0.1:5050/api/incidents/feedback_update",
+            json={
+                "trace_id": request.trace_id,
+                "rating": request.rating,
+                "notes": request.notes
+            },
+            timeout=0.8
+        )
+    except Exception:
+        pass
+    
+    curated_record = None
+    if request.rating == -1:
+        curated_record = dpo_collector.curate_interaction(
+            trace_id=request.trace_id,
+            prompt=request.prompt or "Student Admission Query",
+            rejected_answer=request.rejected_answer or "",
+            context=request.context or [],
+            notes=request.notes,
+            faithfulness=request.faithfulness or 0.0,
+            grounding_status="FLAGGED_BY_STUDENT"
+        )
+        # Notify local dashboard web console (port 5050)
+        try:
+            import httpx
+            httpx.post(
+                "http://127.0.0.1:5050/api/dpo/record",
+                json=curated_record,
+                timeout=0.8
+            )
+        except Exception:
+            pass
+            
+    return {
+        "status": "success",
+        "trace_id": request.trace_id,
+        "rating": request.rating,
+        "dpo_curated": True if request.rating == -1 else False,
+        "curated_record": curated_record
+    }
+
+@app.get("/dpo/stats")
+async def get_dpo_stats():
+    """Returns dataset summary stats for DPO Studio."""
+    return dpo_collector.get_summary_stats()

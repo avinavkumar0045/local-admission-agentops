@@ -8,12 +8,20 @@ Modeled after AWS CloudWatch & AWS OpsCenter:
 
 import uvicorn
 from fastapi import FastAPI, Request
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse, FileResponse
 from datetime import datetime, timezone
 import json
 import logging
 import uuid
 import sys
+import os
+
+from src.agentops.priority_engine import caps_engine
+
+DPO_DIR = os.path.join(os.path.dirname(__file__), "data", "dpo")
+DPO_DATASET_PATH = os.path.join(DPO_DIR, "dpo_train_dataset.jsonl")
+RAW_LOG_PATH = os.path.join(DPO_DIR, "flagged_interactions.jsonl")
+RATINGS_LOG_PATH = os.path.join(DPO_DIR, "ratings_log.jsonl")
 
 app = FastAPI(title="AgentOps Enterprise Command Center")
 
@@ -70,13 +78,17 @@ OPERATIONS_METRICS = {
 }
 
 # In-memory incident store
+# In-memory incident store (Enhanced with CAPS Mathematical Scoring)
 INCIDENTS = [
     {
         "id": "INC-A98B5B",
         "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         "severity": "P2_WARNING",
+        "caps_score": 68.4,
+        "caps_formula": "min(100, [0.4×0.0 + 0.6×76.0] × 1.5 × 1.0) = 68.4",
+        "caps_components": {"I": 0.0, "S": 76.0, "B": 1.5, "U": 1.0},
         "title": "Semantic Grounding Degradation",
-        "summary": "Faithfulness score dipped to 0.45 (< 0.70 SLA threshold). Model generated ungrounded entity claims.",
+        "summary": "Faithfulness score dipped to 0.45 (< 0.70 SLA threshold). Model generated ungrounded entity claims for tuition fees.",
         "root_cause": "RC_RETRIEVAL_GAP: Candidate chunks had high L2 distance (> 1.48) to user query.",
         "culprit_module": "retrieval.faiss",
         "remediation": "Audit FAISS sliding window chunk overlap and verify source PDF indexing coverage.",
@@ -87,6 +99,9 @@ INCIDENTS = [
         "id": "INC-30BA27",
         "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         "severity": "P3_INFO",
+        "caps_score": 9.2,
+        "caps_formula": "min(100, [0.4×0.0 + 0.6×19.2] × 0.8 × 1.0) = 9.2",
+        "caps_components": {"I": 0.0, "S": 19.2, "B": 0.8, "U": 1.0},
         "title": "AgentOps Guardrail: Zero-Compute Pre-Execution Interception",
         "summary": "Out-of-scope query deflected in <2ms before FAISS vector search or LLM generation.",
         "root_cause": "RC_DOMAIN_SCOPE: Non-admission query intercepted by DomainScopeGuardrail.",
@@ -99,6 +114,9 @@ INCIDENTS = [
         "id": "INC-8920",
         "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         "severity": "P3_INFO",
+        "caps_score": 14.4,
+        "caps_formula": "min(100, [0.4×0.0 + 0.6×20.0] × 1.2 × 1.0) = 14.4",
+        "caps_components": {"I": 0.0, "S": 20.0, "B": 1.2, "U": 1.0},
         "title": "Knowledge Base Gap & Safe Abstention",
         "summary": "Out-of-scope query. Vector index returned 0 matching admission documents.",
         "root_cause": "RC_QUERY_AMBIGUITY: User query requested topic outside institutional knowledge base.",
@@ -110,18 +128,18 @@ INCIDENTS = [
 ]
 
 def _sort_incidents():
-    """Enforces strict priority stacking: FIRING before RESOLVED, then P1 > P2 > P3, then newest first."""
+    """Enforces mathematical priority: FIRING before RESOLVED, then strictly descending by CAPS Score, then newest timestamp."""
     global INCIDENTS
     def sort_key(inc):
         status_rank = 0 if inc.get("status") == "FIRING" else 1
-        sev_rank = SEVERITY_ORDER.get(inc.get("severity", "P2_WARNING"), 99)
+        caps_val = inc.get("caps_score", 0.0)
         ts_str = inc.get("timestamp", "")
         ts_val = 0.0
         try:
             ts_val = datetime.strptime(ts_str, "%Y-%m-%d %H:%M:%S").timestamp()
         except Exception:
             pass
-        return (status_rank, sev_rank, -ts_val)
+        return (status_rank, -caps_val, -ts_val)
     INCIDENTS.sort(key=sort_key)
 
 _sort_incidents()
@@ -181,6 +199,83 @@ async def simulate_incident():
     _print_alert_console(new_inc["title"], new_inc["summary"], "P1_CRITICAL")
     return JSONResponse(content={"success": True, "incident": new_inc})
 
+@app.post("/api/dpo/record")
+async def record_dpo_entry(request: Request):
+    data = await request.json()
+    return JSONResponse(content={"status": "recorded", "id": data.get("record_id")})
+
+@app.get("/api/dpo/list")
+async def get_dpo_list():
+    records = []
+    if os.path.exists(RAW_LOG_PATH):
+        with open(RAW_LOG_PATH, "r", encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if line:
+                    try:
+                        records.append(json.loads(line))
+                    except:
+                        pass
+    
+    # Read disk-persisted ratings log (survives any service restart / refresh)
+    thumbs_up = 0
+    thumbs_down = len(records)
+    if os.path.exists(RATINGS_LOG_PATH):
+        with open(RATINGS_LOG_PATH, "r", encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if line:
+                    try:
+                        r_data = json.loads(line)
+                        if r_data.get("rating") == 1:
+                            thumbs_up += 1
+                        elif r_data.get("rating") == -1 and len(records) == 0:
+                            thumbs_down += 1
+                    except:
+                        pass
+
+    # Merge with MySQL stats if available
+    try:
+        import mysql.connector
+        from src.config import DB_HOST, DB_USER, DB_PASSWORD, DB_NAME
+        conn = mysql.connector.connect(host=DB_HOST, user=DB_USER, password=DB_PASSWORD, database=DB_NAME)
+        cur = conn.cursor()
+        cur.execute("SELECT user_feedback, COUNT(*) FROM semantic_evaluations WHERE user_feedback IS NOT NULL GROUP BY user_feedback")
+        rows = cur.fetchall()
+        for r in rows:
+            if r[0] == 1:
+                thumbs_up = max(thumbs_up, r[1])
+            elif r[0] == -1:
+                thumbs_down = max(thumbs_down, r[1])
+        cur.close()
+        conn.close()
+    except Exception:
+        pass
+    
+    total_ratings = thumbs_up + thumbs_down
+    csat = round((thumbs_up / max(1, total_ratings)) * 100, 1) if total_ratings > 0 else 100.0
+
+    return JSONResponse(content={
+        "total_dpo_pairs": len(records),
+        "total_ratings": total_ratings,
+        "thumbs_up": thumbs_up,
+        "thumbs_down": thumbs_down,
+        "csat_pct": csat,
+        "records": records[::-1]  # Latest first
+    })
+
+@app.get("/api/dpo/export")
+async def export_dpo_dataset():
+    if not os.path.exists(DPO_DATASET_PATH):
+        os.makedirs(os.path.dirname(DPO_DATASET_PATH), exist_ok=True)
+        with open(DPO_DATASET_PATH, "w", encoding="utf-8") as f:
+            pass
+    return FileResponse(
+        DPO_DATASET_PATH,
+        media_type="application/x-jsonlines",
+        filename="dpo_train_dataset.jsonl"
+    )
+
 @app.post("/alert")
 async def receive_alert(request: Request):
     payload = await request.json()
@@ -219,12 +314,35 @@ async def receive_alert(request: Request):
             culprit = "faiss.vector_db"
             remedy = "Restart downstream microservice and check network socket availability."
             
+        # Compute CAPS Score for dynamically arriving alert
+        is_fatal = payload.get("is_fatal", "Timeout" in title or "P1" in sev or "Disruption" in title or "Connection" in title)
+        query_text = payload.get("query") or summary
+        caps_res = payload.get("caps") or caps_engine.evaluate(
+            query=query_text,
+            is_fatal=is_fatal,
+            latency_s=payload.get("latency_s", 18.0 if is_fatal else 4.0),
+            faithfulness=payload.get("faithfulness", 0.45 if "P2" in sev else 0.95),
+            hallucinated=payload.get("hallucinated", True if "P2" in sev else False),
+            context_relevance=payload.get("context_relevance", 0.5),
+            feedback_rating=payload.get("feedback_rating"),
+            feedback_notes=payload.get("feedback_notes")
+        )
+        sev = caps_res["severity"]
         new_inc = {
             "id": f"INC-{str(uuid.uuid4())[:6].upper()}",
             "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             "severity": sev,
+            "caps_score": caps_res["caps_score"],
+            "caps_formula": caps_res["formula_repr"],
+            "caps_components": caps_res["components"],
             "title": title,
             "summary": summary,
+            "query": query_text,
+            "latency_s": payload.get("latency_s", 18.0 if is_fatal else 4.0),
+            "faithfulness": payload.get("faithfulness", 0.45 if "P2" in sev else 0.95),
+            "hallucinated": payload.get("hallucinated", True if "P2" in sev else False),
+            "context_relevance": payload.get("context_relevance", 0.5),
+            "is_fatal": is_fatal,
             "root_cause": root_cause,
             "culprit_module": culprit,
             "remediation": remedy,
@@ -233,7 +351,7 @@ async def receive_alert(request: Request):
         }
         INCIDENTS.append(new_inc)
         _sort_incidents()
-        _print_alert_console(title, summary, sev)
+        _print_alert_console(title, f"{summary} | CAPS: {caps_res['caps_score']}", sev)
     else:
         for alert in alerts:
             status = alert.get("status", "firing").upper()
@@ -242,12 +360,23 @@ async def receive_alert(request: Request):
             labels = alert.get("labels", {})
             alertname = labels.get("alertname", "AgentOps Failure Detected")
             
-            sev = "P1_CRITICAL" if "error" in summary.lower() or "critical" in summary.lower() else "P2_WARNING"
+            is_fatal = "error" in summary.lower() or "critical" in summary.lower()
+            caps_res = caps_engine.evaluate(
+                query=summary,
+                is_fatal=is_fatal,
+                latency_s=8.0,
+                faithfulness=0.55 if "warning" in summary.lower() else 0.20,
+                hallucinated=True if "warning" in summary.lower() else False
+            )
+            sev = caps_res["severity"]
             
             new_inc = {
                 "id": f"INC-{str(uuid.uuid4())[:6].upper()}",
                 "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
                 "severity": sev,
+                "caps_score": caps_res["caps_score"],
+                "caps_formula": caps_res["formula_repr"],
+                "caps_components": caps_res["components"],
                 "title": alertname,
                 "summary": summary,
                 "root_cause": "RC_SPAN_FAILURE: MySQL span table reported status='error' > 0 condition.",
@@ -258,9 +387,63 @@ async def receive_alert(request: Request):
             }
             INCIDENTS.append(new_inc)
             _sort_incidents()
-            _print_alert_console(alertname, summary, sev)
+            _print_alert_console(alertname, f"{summary} | CAPS: {caps_res['caps_score']}", sev)
             
     return JSONResponse(content={"status": "Alert Logged & Enqueued"})
+
+@app.post("/api/incidents/feedback_update")
+async def update_incident_feedback(request: Request):
+    payload = await request.json()
+    target_tid = payload.get("trace_id")
+    rating = payload.get("rating")  # 1 for up, -1 for down
+    notes = payload.get("notes")
+
+    if not target_tid:
+        return JSONResponse(status_code=400, content={"error": "trace_id required"})
+
+    updated_count = 0
+    for inc in INCIDENTS:
+        inc_tid = inc.get("trace_id", "")
+        # Match trace_id exactly or as prefix/suffix
+        if inc_tid and (inc_tid == target_tid or target_tid in inc_tid or inc_tid in target_tid):
+            prev_comp = inc.get("caps_components", {})
+            query_str = inc.get("query") or inc.get("summary", "")
+            
+            # Recalculate CAPS with updated feedback rating
+            caps_res = caps_engine.evaluate(
+                query=query_str,
+                is_fatal=inc.get("is_fatal", prev_comp.get("I", 0.0) >= 100.0),
+                latency_s=inc.get("latency_s", 4.0),
+                faithfulness=inc.get("faithfulness", 0.50),
+                hallucinated=inc.get("hallucinated", True if inc.get("severity") in ["P1_CRITICAL", "P2_WARNING"] else False),
+                context_relevance=inc.get("context_relevance", 0.50),
+                feedback_rating=rating,
+                feedback_notes=notes
+            )
+            
+            old_score = inc.get("caps_score", 0.0)
+            inc["caps_score"] = caps_res["caps_score"]
+            inc["caps_formula"] = caps_res["formula_repr"]
+            inc["caps_components"] = caps_res["components"]
+            inc["severity"] = caps_res["severity"]
+            inc["feedback_rating"] = rating
+            inc["feedback_notes"] = notes
+
+            if rating == 1:
+                if "[Mitigated" not in inc.get("title", ""):
+                    inc["title"] = inc.get("title", "") + " [Mitigated: 👍 Upvote]"
+                inc["root_cause"] = "RC_FALSE_ALARM_SUPPRESSED: Student verified answer as accurate. Priority mathematically de-escalated via human multiplier U=0.6."
+            elif rating == -1:
+                if "[Amplified" not in inc.get("title", ""):
+                    inc["title"] = inc.get("title", "") + " [Amplified: 👎 Flagged]"
+
+            updated_count += 1
+            print(f"🔄 [CAPS REACTIVE UPDATE] Incident {inc.get('id')} updated for trace {target_tid}: Score {old_score} -> {caps_res['caps_score']} ({caps_res['formula_repr']})")
+
+    if updated_count > 0:
+        _sort_incidents()
+        return JSONResponse(content={"status": "Updated", "updated_count": updated_count})
+    return JSONResponse(content={"status": "No matching incident found for trace_id", "trace_id": target_tid})
 
 def _print_alert_console(title, detail, severity):
     print("\n" + "🔴"*30)
@@ -933,6 +1116,20 @@ HTML_CONTENT = """
             border: 1px solid rgba(59, 130, 246, 0.4);
         }
 
+        .caps-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            background: rgba(139, 92, 246, 0.15);
+            color: #C4B5FD;
+            border: 1px solid rgba(139, 92, 246, 0.35);
+            padding: 3px 9px;
+            border-radius: 6px;
+            font-size: 0.74rem;
+            font-weight: 800;
+            letter-spacing: 0.02em;
+        }
+
         .ops-status {
             font-size: 0.72rem;
             font-weight: 700;
@@ -1079,6 +1276,10 @@ HTML_CONTENT = """
         <button class="tab-btn" onclick="switchTab('dev')">
             <span> Developer Console (Prioritized Issues)</span>
             <span class="tab-badge" id="firing-count-badge">0</span>
+        </button>
+        <button class="tab-btn" onclick="switchTab('dpo')">
+            <span>🎯 DPO Dataset Studio (RLHF/HITL)</span>
+            <span class="tab-badge" id="dpo-count-badge" style="background: rgba(16, 185, 129, 0.2); color: #34D399;">0</span>
         </button>
     </div>
 
@@ -1407,7 +1608,10 @@ HTML_CONTENT = """
                 <button class="filter-btn" onclick="setFilter('P3')">🔵 P3 Info (<span id="count-p3">0</span>)</button>
                 <button class="filter-btn" onclick="setFilter('FIRING')">Active / Firing</button>
             </div>
-            <div>
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <span style="font-size: 0.74rem; color: #C4B5FD; background: rgba(167, 139, 250, 0.12); padding: 5px 11px; border-radius: 6px; border: 1px solid rgba(167, 139, 250, 0.3); font-weight: 600;">
+                    🧮 Stack-Ranked by CAPS Index
+                </span>
                 <button class="btn" style="font-size: 0.76rem; padding: 5px 12px;" onclick="clearResolved()">Clear Resolved</button>
             </div>
         </div>
@@ -1415,6 +1619,89 @@ HTML_CONTENT = """
         <!-- Stack-Ranked Issue Cards -->
         <div class="issues-stack" id="issues-list">
             <!-- Dynamically rendered -->
+        </div>
+    </div>
+
+    <!-- ================= TAB 3: DPO DATASET STUDIO (RLHF/HITL) ================= -->
+    <div id="view-dpo" class="view-content">
+        <!-- DPO Studio Header & Export -->
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; background: var(--bg-card); padding: 1.2rem 1.6rem; border-radius: 12px; border: 1px solid var(--border-glass);">
+            <div>
+                <h2 style="font-size: 1.25rem; font-weight: 800; color: #FFFFFF; display: flex; align-items: center; gap: 10px;">
+                    <span>🎯</span> Student Feedback & Quality Assurance Studio
+                </h2>
+                <p style="font-size: 0.82rem; color: var(--text-secondary); margin-top: 4px;">
+                    Captures real-time student ratings, flagged inaccuracies, and verified corrections for quality review and model alignment.
+                </p>
+            </div>
+            <div>
+                <a href="/api/dpo/export" class="btn" style="background: linear-gradient(135deg, #10B981, #059669); color: #FFFFFF; font-weight: 700; border: none; padding: 10px 18px; box-shadow: 0 4px 14px rgba(16, 185, 129, 0.35); text-decoration: none;" download>
+                    📥 Export QA Dataset (JSONL)
+                </a>
+            </div>
+        </div>
+
+        <!-- DPO KPI Summary Grid (Clean 3-Card Layout) -->
+        <div class="finops-grid" style="grid-template-columns: repeat(3, 1fr); margin-bottom: 2rem;">
+            <div class="metric-card indigo">
+                <div class="metric-label">
+                    <span>Student CSAT Rating</span>
+                    <span>⭐</span>
+                </div>
+                <div class="metric-val" id="dpo-stat-csat">100.0%</div>
+                <div class="metric-sub"><span id="dpo-stat-up">0</span> positive · <span id="dpo-stat-down">0</span> flagged</div>
+            </div>
+
+            <div class="metric-card amber">
+                <div class="metric-label">
+                    <span>Flagged Inaccuracies</span>
+                    <span>⚠️</span>
+                </div>
+                <div class="metric-val" id="dpo-stat-total" style="color: #FCD34D;">0</div>
+                <div class="metric-sub">Flagged by students for review</div>
+            </div>
+
+            <div class="metric-card emerald">
+                <div class="metric-label">
+                    <span>Total Student Ratings</span>
+                    <span>💬</span>
+                </div>
+                <div class="metric-val" id="dpo-stat-ratings" style="color: #34D399;">0</div>
+                <div class="metric-sub">Interactive feedback submitted</div>
+            </div>
+        </div>
+
+        <!-- Curated Interactions Table -->
+        <div class="ops-panel">
+            <div class="ops-panel-title">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <span style="font-size: 1.15rem;">📜</span>
+                    <span>Flagged Interactions & Curated DPO Training Pairs</span>
+                </div>
+                <span class="service-badge" id="dpo-table-count">0 PAIRS LOADED</span>
+            </div>
+            
+            <div style="overflow-x: auto; margin-top: 1rem;">
+                <table style="width: 100%; border-collapse: collapse; font-size: 0.82rem; color: var(--text-secondary);">
+                    <thead>
+                        <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.08); text-align: left; color: #94A3B8;">
+                            <th style="padding: 10px 14px;">RECORD & TRACE</th>
+                            <th style="padding: 10px 14px;">STUDENT PROMPT</th>
+                            <th style="padding: 10px 14px;">REJECTED ANSWER (IMPERFECT)</th>
+                            <th style="padding: 10px 14px;">CHOSEN (GOLD-STANDARD GROUND TRUTH)</th>
+                            <th style="padding: 10px 14px;">SOURCE / NOTES</th>
+                            <th style="padding: 10px 14px;">STATUS</th>
+                        </tr>
+                    </thead>
+                    <tbody id="dpo-table-body">
+                        <tr>
+                            <td colspan="6" style="text-align: center; padding: 2.5rem; color: var(--text-muted);">
+                                No flagged interactions yet. Give a thumbs-down (👎) in the Chatbot assistant to curate your first DPO pair!
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
         </div>
     </div>
 
@@ -1429,9 +1716,13 @@ HTML_CONTENT = """
             if (tab === 'ops') {
                 document.querySelectorAll('.tab-btn')[0].classList.add('active');
                 document.getElementById('view-ops').classList.add('active');
-            } else {
+            } else if (tab === 'dev') {
                 document.querySelectorAll('.tab-btn')[1].classList.add('active');
                 document.getElementById('view-dev').classList.add('active');
+            } else if (tab === 'dpo') {
+                document.querySelectorAll('.tab-btn')[2].classList.add('active');
+                document.getElementById('view-dpo').classList.add('active');
+                fetchDPOData();
             }
         }
 
@@ -1555,6 +1846,7 @@ HTML_CONTENT = """
                                 <span class="ops-id mono">${inc.id}</span>
                                 <span class="ops-sev ${sevCls}">${sevLabel}</span>
                                 <span class="ops-status ${statusCls}">● ${inc.status}</span>
+                                <span class="caps-pill mono" title="${escapeHtml(inc.caps_formula || '')}">🧮 CAPS: ${inc.caps_score ? inc.caps_score.toFixed(1) : '50.0'}</span>
                             </div>
                             <div>
                                 ${inc.status === 'FIRING' ? `<button class="resolve-btn" onclick="resolveIncident('${inc.id}')">✓ Mark Resolved</button>` : `<span style="color: #34D399; font-weight: 700; font-size: 0.78rem;">✓ RESOLVED</span>`}
@@ -1565,6 +1857,10 @@ HTML_CONTENT = """
                         <div class="ops-summary">${inc.summary}</div>
 
                         <div class="rca-container mono">
+                            <div class="rca-line">
+                                <span class="rca-tag">Priority Metric (CAPS):</span>
+                                <span class="rca-content" style="color: #C4B5FD;"><code>${escapeHtml(inc.caps_formula || 'min(100, [0.4*I + 0.6*S]*B*U)')}</code></span>
+                            </div>
                             <div class="rca-line">
                                 <span class="rca-tag">Root Cause (RCA):</span>
                                 <span class="rca-content" style="color: #FCD34D;">${inc.root_cause || 'RC_UNKNOWN: Subsystem anomaly'}</span>
@@ -1604,6 +1900,85 @@ HTML_CONTENT = """
             fetchIncidents();
         }
 
+        function escapeHtml(text) {
+            if (!text) return '';
+            return String(text)
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+
+        async function fetchDPOData() {
+            try {
+                const res = await fetch('/api/dpo/list');
+                const data = await res.json();
+                
+                const countBadge = document.getElementById('dpo-count-badge');
+                if (countBadge) countBadge.innerText = data.total_dpo_pairs;
+                
+                const statTotal = document.getElementById('dpo-stat-total');
+                if (statTotal) statTotal.innerText = data.total_dpo_pairs;
+
+                const statRatings = document.getElementById('dpo-stat-ratings');
+                if (statRatings) statRatings.innerText = data.total_ratings;
+
+                const statCsat = document.getElementById('dpo-stat-csat');
+                if (statCsat) statCsat.innerText = `${data.csat_pct}%`;
+
+                const statUp = document.getElementById('dpo-stat-up');
+                if (statUp) statUp.innerText = data.thumbs_up;
+
+                const statDown = document.getElementById('dpo-stat-down');
+                if (statDown) statDown.innerText = data.thumbs_down;
+
+                const tableCount = document.getElementById('dpo-table-count');
+                if (tableCount) tableCount.innerText = `${data.records ? data.records.length : 0} PAIRS LOADED`;
+
+                const tbody = document.getElementById('dpo-table-body');
+                if (!tbody) return;
+
+                if (!data.records || data.records.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; padding: 2.5rem; color: var(--text-muted);">No flagged interactions yet. Give a thumbs-down (👎) in the Chatbot assistant to curate your first DPO pair!</td></tr>`;
+                    return;
+                }
+
+                tbody.innerHTML = data.records.map(r => {
+                    const tid = r.trace_id ? r.trace_id.slice(0, 8) : 'N/A';
+                    const tempoUrl = `http://localhost:3000/explore?schemaVersion=1&panes=%7B%223u5%22%3A%7B%22datasource%22%3A%22ffx7prdoh20hsd%22%2C%22queries%22%3A%5B%7B%22refId%22%3A%22A%22%2C%22datasource%22%3A%7B%22type%22%3A%22tempo%22%2C%22uid%22%3A%22ffx7prdoh20hsd%22%7D%2C%22queryType%22%3A%22traceql%22%2C%22query%22%3A%22%7Bspan.trace_id%3D%5C%22${r.trace_id}%5C%22%7D%22%7D%5D%7D%7D`;
+                    return `
+                    <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.04); transition: background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.02)'" onmouseout="this.style.background='transparent'">
+                        <td style="padding: 12px 14px;">
+                            <div style="font-weight: 700; color: #F8FAFC;">${r.record_id}</div>
+                            <div style="font-size: 0.72rem; color: #64748B;"><a href="${tempoUrl}" target="_blank" style="color: #6366F1; text-decoration: none;">Tempo: ${tid} ↗</a></div>
+                        </td>
+                        <td style="padding: 12px 14px; color: #E2E8F0; font-weight: 500; max-width: 220px;">
+                            ${escapeHtml(r.prompt || '')}
+                        </td>
+                        <td style="padding: 12px 14px; color: #FCA5A5; max-width: 280px; font-size: 0.78rem;">
+                            ${escapeHtml((r.rejected_answer || '').slice(0, 160))}...
+                        </td>
+                        <td style="padding: 12px 14px; color: #86EFAC; max-width: 300px; font-size: 0.78rem;">
+                            ${escapeHtml((r.chosen_answer || '').slice(0, 180))}...
+                        </td>
+                        <td style="padding: 12px 14px; font-size: 0.74rem;">
+                            <div style="color: #94A3B8;">${escapeHtml(r.source_doc || 'verified_context')}</div>
+                            ${r.student_notes ? `<div style="color: #FCD34D; font-style: italic; margin-top: 2px;">"${escapeHtml(r.student_notes)}"</div>` : ''}
+                        </td>
+                        <td style="padding: 12px 14px;">
+                            <span style="display: inline-block; padding: 3px 8px; border-radius: 4px; font-size: 0.68rem; font-weight: 700; background: rgba(16, 185, 129, 0.15); color: #34D399; border: 1px solid rgba(16, 185, 129, 0.3);">
+                                ${r.status || 'CURATED'}
+                            </span>
+                        </td>
+                    </tr>
+                    `;
+                }).join('');
+            } catch (err) {
+                console.error("Failed to load DPO data:", err);
+            }
+        }
+
         async function simulateAlert() {
             await fetch('/api/simulate', { method: 'POST' });
             fetchIncidents();
@@ -1613,9 +1988,11 @@ HTML_CONTENT = """
         // Live polling every 2.5s
         fetchOperations();
         fetchIncidents();
+        fetchDPOData();
         setInterval(() => {
             fetchOperations();
             fetchIncidents();
+            fetchDPOData();
         }, 2500);
     </script>
 </body>

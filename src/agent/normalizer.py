@@ -189,8 +189,23 @@ class QueryNormalizer:
 
 
 # ─────────────────────────────────────────────────────────────
-# DOMAIN SCOPE GUARDRAIL (Zero-Cost Pre-Execution Intent Filter)
+# DOMAIN SCOPE & SECURITY GUARDRAILS (Zero-Cost Intent Filter)
 # ─────────────────────────────────────────────────────────────
+PROMPT_INJECTION_PATTERNS = [
+    r'\bignore (all )?(previous|prior|above) (instructions|prompts|rules|commands)\b',
+    r'\byou are now (in )?(developer mode|dan|unrestricted|jailbreak)\b',
+    r'\b(system prompt|system instructions?|developer instructions?|hidden prompt)\b',
+    r'\b(print|reveal|display|output|show) (your|the|system) (prompt|instructions|rules)\b',
+    r'\bbypass (all )?(guardrails|safety|filters|rules|policies)\b',
+    r'\bpretend (to be|you are) an? (evil|unrestricted|unfiltered|jailbroken)\b',
+    r'\bact as an? (ai|bot) without (rules|filters|morals|ethics)\b'
+]
+
+TOXICITY_PATTERNS = [
+    r'\b(fuck|shit|bitch|bastard|asshole|idiot|stupid bot|moron|dumb bot|scam college|useless bot)\b',
+    r'\b(hate speech|kill yourself|kys|go die)\b'
+]
+
 OUT_OF_SCOPE_PATTERNS = [
     r'\bcapital of\b',
     r'\bpresident of\b',
@@ -256,6 +271,30 @@ class DomainScopeGuardrail:
         t0 = time.time()
         q_lower = query.lower()
         
+        # 0. Check Prompt Injection & Jailbreak attempts
+        for pat in PROMPT_INJECTION_PATTERNS:
+            match = re.search(pat, q_lower)
+            if match:
+                elapsed_ms = (time.time() - t0) * 1000
+                return False, "SECURITY_PROMPT_INJECTION_BLOCKED", {
+                    "matched_pattern": match.group(0),
+                    "latency_ms": round(elapsed_ms, 3),
+                    "action": "BLOCKED",
+                    "category": "PROMPT_INJECTION"
+                }
+
+        # 0b. Check Toxicity & Harassment
+        for pat in TOXICITY_PATTERNS:
+            match = re.search(pat, q_lower)
+            if match:
+                elapsed_ms = (time.time() - t0) * 1000
+                return False, "TOXICITY_POLICY_VIOLATION", {
+                    "matched_pattern": match.group(0),
+                    "latency_ms": round(elapsed_ms, 3),
+                    "action": "BLOCKED",
+                    "category": "TOXICITY"
+                }
+
         # 1. Check explicit out-of-scope patterns
         for pat in OUT_OF_SCOPE_PATTERNS:
             match = re.search(pat, q_lower)

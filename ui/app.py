@@ -260,7 +260,7 @@ else:
     """, unsafe_allow_html=True)
 
     # Render Chat History
-    for msg in st.session_state.messages:
+    for idx, msg in enumerate(st.session_state.messages):
         if msg["role"] == "user":
             with st.chat_message("user"):
                 st.markdown(f'<div class="user-glass-bubble">{msg["content"]}</div>', unsafe_allow_html=True)
@@ -299,7 +299,23 @@ else:
                     faith = m.get("faithfulness", 0.0)
                     ctx_rel = m.get("context_relevance", 0.0)
                     status = m.get("grounding_status", "N/A")
-                    if status == "GUARDRAIL_BLOCKED":
+                    if status == "SECURITY_BLOCKED":
+                        st.markdown(
+                            """<div class="eval-badge-line" style="border-left: 3px solid #EF4444;">
+                                <span>🛡️ Security Guard:</span>
+                                <span class="eval-badge-tag" style="background: rgba(239, 68, 68, 0.15); color: #FCA5A5;">Prompt Injection Intercepted (<1ms)</span>
+                            </div>""",
+                            unsafe_allow_html=True
+                        )
+                    elif status == "TOXICITY_BLOCKED":
+                        st.markdown(
+                            """<div class="eval-badge-line" style="border-left: 3px solid #F59E0B;">
+                                <span>🛡️ Safety Guard:</span>
+                                <span class="eval-badge-tag" style="background: rgba(245, 158, 11, 0.15); color: #FCD34D;">Toxicity & Abuse Deflected (<1ms)</span>
+                            </div>""",
+                            unsafe_allow_html=True
+                        )
+                    elif status == "GUARDRAIL_BLOCKED":
                         st.markdown(
                             """<div class="eval-badge-line" style="border-left: 3px solid #6366f1;">
                                 <span>🛡️ Scope Guard:</span>
@@ -317,6 +333,82 @@ else:
                             </div>""",
                             unsafe_allow_html=True
                         )
+
+                # Human-in-the-Loop Feedback & DPO Dataset Curation
+                tid = msg.get("trace_id", "")
+                if tid:
+                    f_status = msg.get("feedback_status")
+                    if f_status == "up":
+                        st.markdown('<div style="font-size: 0.78rem; color: #10B981; margin-top: 6px;">✅ <b>Feedback Recorded:</b> Verified gold standard response.</div>', unsafe_allow_html=True)
+                    elif f_status == "down":
+                        note_text = msg.get("feedback_note", "")
+                        st.markdown(f'<div style="font-size: 0.78rem; color: #F59E0B; margin-top: 6px;">🎯 <b>Flagged for DPO Fine-Tuning</b> {f"— <i>{note_text}</i>" if note_text else ""}</div>', unsafe_allow_html=True)
+                    else:
+                        c_up, c_down, _ = st.columns([0.16, 0.24, 0.60])
+                        with c_up:
+                            if st.button("👍 Helpful", key=f"thumb_up_{idx}", help="Mark as accurate and grounded"):
+                                try:
+                                    httpx.post("http://127.0.0.1:8000/feedback", json={"trace_id": tid, "rating": 1}, timeout=2.0)
+                                except Exception:
+                                    pass
+                                try:
+                                    httpx.post("http://127.0.0.1:5050/api/incidents/feedback_update", json={"trace_id": tid, "rating": 1}, timeout=1.0)
+                                except Exception:
+                                    pass
+                                msg["feedback_status"] = "up"
+                                update_active_conversation_messages()
+                                st.toast("Thank you! Recorded as verified gold standard.", icon="👍")
+                                st.rerun()
+                        with c_down:
+                            if st.button("👎 Flag / Inaccurate", key=f"thumb_down_{idx}", help="Flag as inaccurate to curate DPO dataset"):
+                                st.session_state[f"show_note_input_{idx}"] = True
+                                st.rerun()
+
+                        if st.session_state.get(f"show_note_input_{idx}"):
+                            with st.container():
+                                note_val = st.text_input(
+                                    "Optional correction or explanation to curate DPO dataset:",
+                                    key=f"note_input_{idx}",
+                                    placeholder="e.g. Fees mentioned was outdated, SRM 2026 fee is 4.75L"
+                                )
+                                c_sub, c_cancel = st.columns([0.35, 0.65])
+                                with c_sub:
+                                    if st.button("Submit DPO Flag", key=f"submit_note_{idx}"):
+                                        prompt_text = st.session_state.messages[idx-1]["content"] if idx > 0 else "Student Query"
+                                        try:
+                                            httpx.post(
+                                                "http://127.0.0.1:8000/feedback",
+                                                json={
+                                                    "trace_id": tid,
+                                                    "rating": -1,
+                                                    "notes": note_val,
+                                                    "prompt": prompt_text,
+                                                    "rejected_answer": msg.get("content", ""),
+                                                    "context": msg.get("context", []),
+                                                    "faithfulness": msg.get("eval_metrics", {}).get("faithfulness", 0.0)
+                                                },
+                                                timeout=3.0
+                                            )
+                                        except Exception:
+                                            pass
+                                        try:
+                                            httpx.post(
+                                                "http://127.0.0.1:5050/api/incidents/feedback_update",
+                                                json={"trace_id": tid, "rating": -1, "notes": note_val},
+                                                timeout=1.0
+                                            )
+                                        except Exception:
+                                            pass
+                                        msg["feedback_status"] = "down"
+                                        msg["feedback_note"] = note_val
+                                        st.session_state[f"show_note_input_{idx}"] = False
+                                        update_active_conversation_messages()
+                                        st.toast("Curated into DPO training dataset!", icon="🎯")
+                                        st.rerun()
+                                with c_cancel:
+                                    if st.button("Cancel", key=f"cancel_note_{idx}"):
+                                        st.session_state[f"show_note_input_{idx}"] = False
+                                        st.rerun()
 
 # --- Chat Input & Execution ---
 chat_input_val = st.chat_input("Ask anything about college admissions...")
@@ -376,7 +468,17 @@ if chat_input_val:
                     try:
                         httpx.post(
                             "http://127.0.0.1:5050/alert", 
-                            json={"alerts": [{"status": "firing", "annotations": {"summary": f"P2 Semantic Warning ({inc_id}): Faithfulness {faith:.2f} < 0.70"}}]}, 
+                            json={
+                                "title": "AgentOps Alert: Semantic Grounding Degradation",
+                                "severity": "P2_WARNING",
+                                "summary": f"Query '{chat_input_val[:60]}': Faithfulness ({faith:.2f}) dipped below 0.70 threshold.",
+                                "query": chat_input_val,
+                                "trace_id": trace_id,
+                                "faithfulness": faith,
+                                "context_relevance": eval_metrics.get("context_relevance", 0.5),
+                                "hallucinated": hallucinated,
+                                "is_fatal": False
+                            }, 
                             timeout=0.6
                         )
                     except Exception:
@@ -403,7 +505,23 @@ if chat_input_val:
                     faith = eval_metrics.get("faithfulness", 0.0)
                     ctx_rel = eval_metrics.get("context_relevance", 0.0)
                     status = eval_metrics.get("grounding_status", "N/A")
-                    if status == "GUARDRAIL_BLOCKED":
+                    if status == "SECURITY_BLOCKED":
+                        st.markdown(
+                            """<div class="eval-badge-line" style="border-left: 3px solid #EF4444;">
+                                <span>🛡️ Security Guard:</span>
+                                <span class="eval-badge-tag" style="background: rgba(239, 68, 68, 0.15); color: #FCA5A5;">Prompt Injection Intercepted (<1ms)</span>
+                            </div>""",
+                            unsafe_allow_html=True
+                        )
+                    elif status == "TOXICITY_BLOCKED":
+                        st.markdown(
+                            """<div class="eval-badge-line" style="border-left: 3px solid #F59E0B;">
+                                <span>🛡️ Safety Guard:</span>
+                                <span class="eval-badge-tag" style="background: rgba(245, 158, 11, 0.15); color: #FCD34D;">Toxicity & Abuse Deflected (<1ms)</span>
+                            </div>""",
+                            unsafe_allow_html=True
+                        )
+                    elif status == "GUARDRAIL_BLOCKED":
                         st.markdown(
                             """<div class="eval-badge-line" style="border-left: 3px solid #6366f1;">
                                 <span>🛡️ Scope Guard:</span>
@@ -452,7 +570,14 @@ if chat_input_val:
                 try:
                     httpx.post(
                         "http://127.0.0.1:5050/alert", 
-                        json={"alerts": [{"status": "firing", "annotations": {"summary": f"P1 Latency SLA Timeout ({inc_id})"}}]}, 
+                        json={
+                            "title": "AgentOps Alert: Inference Latency SLA Timeout",
+                            "severity": "P1_CRITICAL",
+                            "summary": f"Query '{chat_input_val[:60]}': Execution exceeded latency deadline (ReadTimeout).",
+                            "query": chat_input_val,
+                            "is_fatal": True,
+                            "latency_s": 60.0
+                        }, 
                         timeout=0.6
                     )
                 except Exception:
@@ -482,7 +607,14 @@ if chat_input_val:
                 try:
                     httpx.post(
                         "http://127.0.0.1:5050/alert", 
-                        json={"alerts": [{"status": "firing", "annotations": {"summary": f"P1 Critical Failure ({inc_id}): {str(e)[:80]}"}}]}, 
+                        json={
+                            "title": "AgentOps Alert: Critical Service Disruption",
+                            "severity": "P1_CRITICAL",
+                            "summary": f"Query '{chat_input_val[:60]}': Backend API / Vector DB failure: {str(e)[:80]}",
+                            "query": chat_input_val,
+                            "is_fatal": True,
+                            "latency_s": 15.0
+                        }, 
                         timeout=0.6
                     )
                 except Exception:
