@@ -1,0 +1,312 @@
+[
+  {
+    "source_id": "S01",
+    "institution": "SRMIST",
+    "title": "Engineering Handbook 2025-26: faculty/staff",
+    "url": "https://webstor.srmist.edu.in/web_assets/downloads/2025/hand-book-2025-26.pdf",
+    "source_period": "2025-26",
+    "retrieved_on": "2026-11-21",
+    "method": "local_document_extraction",
+    "retrieval_note": "Reviewed existing project extraction from the user's local handbook."
+  },
+  {
+    "source_id": "S02",
+    "institution": "SRMIST",
+    "title": "Annual Report 2024-25: organisational structure",
+    "url": "https://webstor.srmist.edu.in/web_assets/downloads/2026/ugc-annual-report-2024-25.pdf",
+    "source_period": "2024-25",
+    "retrieved_on": "2026-11-21",
+    "method": "official_pdf_text_review",
+    "retrieval_note": "Official source text retrieved through web extraction/search; the service may return cached content. Retrieval date is not the publication date."
+  },
+  {
+    "source_id": "S03",
+    "institution": "SRMIST",
+    "title": "Vice Chancellor and Registrar directory",
+    "url": "https://medical.srmist.edu.in/affiliating-university-and-details-of-the-vice-chancellor-and-registrar/",
+    "source_period": "",
+    "retrieved_on": "2026-11-21",
+    "method": "official_webpage_review",
+    "retrieval_note": "Official source text retrieved through web extraction/search; the service may return cached content. Retrieval date is not the publication date."
+  },
+  {
+    "source_id": "S04",
+    "institution": "SRMIST",
+    "title": "KTR first-year boys hostel fees",
+    "url": "https://webstor.srmist.edu.in/web_assets/downloads/2026/circular-for-all-first-year-btech-and-mtech-2026-boys.pdf",
+    "source_period": "2026-27",
+    "retrieved_on": "2026-11-21",
+    "method": "official_pdf_text_review",
+    "retrieval_note": "Official source text retrieved through web extraction/search; the service may return cached content. Retrieval date is not the publication date."
+  },
+  {
+    "source_id": "S05",
+    "institution": "SRMIST",
+    "title": "KTR first-year girls hostel fees",
+    "url": "https://webstor.srmist.edu.in/web_assets/downloads/2026/all-first-year-b-tech-b-arch-bdes-and-mtech-integrated-girls.pdf",
+    "source_period": "2026-27",
+    "retrieved_on": "2026-11-21",
+    "method": "official_pdf_text_review",
+    "retrieval_note": "Official source text retrieved through web extraction/search; the service may return cached content. Retrieval date is not the publication date."
+  },
+  {
+    "source_id": "S06",
+    "institution": "SRMIST",
+    "title": "Medical college hostel facilities",
+    "url": "https://medical.srmist.edu.in/hostels/",
+    "source_period": "",
+    "retrieved_on": "2026-11-21",
+    "method": "official_webpage_review",
+    "retrieval_note": "Official source text retrieved through web extraction/search; the service may return cached content. Retrieval date is not the publication date."
+  },
+  {
+    "source_id": "S07",
+    "institution": "SRM University-AP",
+    "title": "Leadership directory",
+    "url": "https://www.srmap.edu.in/about-us/leadership/",
+    "source_period": "",
+    "retrieved_on": "2026-11-21",
+    "method": "official_webpage_review",
+    "retrieval_note": "Official source text retrieved through web extraction/search; the service may return cached content. Retrieval date is not the publication date."
+  },
+  {
+    "source_id": "S08",
+    "institution": "SRM University-AP",
+    "title": "Heads of departments",
+    "url": "https://www.srmap.edu.in/all-hods/",
+    "source_period": "",
+    "retrieved_on": "2026-11-21",
+    "method": "official_webpage_review",
+    "retrieval_note": "Official source text retrieved through web extraction/search; the service may return cached content. Retrieval date is not the publication date."
+  },
+  {
+    "source_id": "S09",
+    "institution": "SRM University-AP",
+    "title": "Accommodation",
+    "url": "https://www.srmap.edu.in/life-at-srmap/accommodation/",
+    "source_period": "",
+    "retrieved_on": "2026-11-21",
+    "method": "official_webpage_review",
+    "retrieval_note": "Official source text retrieved through web extraction/search; the service may return cached content. Retrieval date is not the publication date."
+  },
+  {
+    "source_id": "S10",
+    "institution": "SRM University-AP",
+    "title": "Dining and eateries",
+    "url": "https://www.srmap.edu.in/life-at-srmap/dining-eateries/",
+    "source_period": "",
+    "retrieved_on": "2026-11-21",
+    "method": "official_webpage_review",
+    "retrieval_note": "Official source text retrieved through web extraction/search; the service may return cached content. Retrieval date is not the publication date."
+  },
+  {
+    "source_id": "S11",
+    "institution": "SRM University-AP",
+    "title": "Chancellor profile",
+    "url": "https://www.srmap.edu.in/about-us/chancellor/",
+    "source_period": "",
+    "retrieved_on": "2026-11-21",
+    "method": "official_webpage_review",
+    "retrieval_note": "Official source text retrieved through web extraction/search; the service may return cached content. Retrieval date is not the publication date."
+  },
+  {
+    "source_id": "S12",
+    "institution": "IIT Madras",
+    "title": "Central administration",
+    "url": "https://www.iitm.ac.in/the-institute/administration/central-administration",
+    "source_period": "",
+    "retrieved_on": "2026-11-21",
+    "method": "official_webpage_review",
+    "retrieval_note": "Official source text retrieved through web extraction/search; the service may return cached content. Retrieval date is not the publication date."
+  },
+  {
+    "source_id": "S13",
+    "institution": "IIT Madras",
+    "title": "Hostel life",
+    "url": "https://www.iitm.ac.in/campus-life/hostel-life",
+    "source_period": "",
+    "retrieved_on": "2026-11-21",
+    "method": "official_webpage_review",
+    "retrieval_note": "Official source text retrieved through web extraction/search; the service may return cached content. Retrieval date is not the publication date."
+  },
+  {
+    "source_id": "S14",
+    "institution": "IIT Madras",
+    "title": "Mess rebate rules",
+    "url": "https://ccw.iitm.ac.in/pages/mess-rebate-rules",
+    "source_period": "",
+    "retrieved_on": "2026-11-21",
+    "method": "official_webpage_review",
+    "retrieval_note": "Official source text retrieved through web extraction/search; the service may return cached content. Retrieval date is not the publication date."
+  },
+  {
+    "source_id": "S15",
+    "institution": "IIT Madras",
+    "title": "Office of Hostel Management contact directory",
+    "url": "https://ccw.iitm.ac.in/pages/contact",
+    "source_period": "",
+    "retrieved_on": "2026-11-21",
+    "method": "official_webpage_review",
+    "retrieval_note": "Official source text retrieved through web extraction/search; the service may return cached content. Retrieval date is not the publication date."
+  },
+  {
+    "source_id": "S16",
+    "institution": "IIT Delhi",
+    "title": "Student Affairs leadership",
+    "url": "https://sac.iitd.ac.in/teams",
+    "source_period": "",
+    "retrieved_on": "2026-11-21",
+    "method": "official_webpage_review",
+    "retrieval_note": "Official source text retrieved through web extraction/search; the service may return cached content. Retrieval date is not the publication date."
+  },
+  {
+    "source_id": "S17",
+    "institution": "IIT Delhi",
+    "title": "Board for Hostel Management",
+    "url": "https://bhm.iitd.ac.in/",
+    "source_period": "",
+    "retrieved_on": "2026-11-21",
+    "method": "official_webpage_review",
+    "retrieval_note": "Official source text retrieved through web extraction/search; the service may return cached content. Retrieval date is not the publication date."
+  },
+  {
+    "source_id": "S18",
+    "institution": "IIT Delhi",
+    "title": "Hostel organisation",
+    "url": "https://home.iitd.ac.in/bhm.php",
+    "source_period": "",
+    "retrieved_on": "2026-11-21",
+    "method": "official_webpage_review",
+    "retrieval_note": "Official source text retrieved through web extraction/search; the service may return cached content. Retrieval date is not the publication date."
+  },
+  {
+    "source_id": "S19",
+    "institution": "NIT Tiruchirappalli",
+    "title": "Deans directory",
+    "url": "https://www.nitt.edu/home/administration/deans/",
+    "source_period": "",
+    "retrieved_on": "2026-11-21",
+    "method": "official_webpage_review",
+    "retrieval_note": "Official source text retrieved through web extraction/search; the service may return cached content. Retrieval date is not the publication date."
+  },
+  {
+    "source_id": "S20",
+    "institution": "NIT Tiruchirappalli",
+    "title": "Heads of departments directory",
+    "url": "https://www.nitt.edu/home/administration/hods/",
+    "source_period": "",
+    "retrieved_on": "2026-11-21",
+    "method": "official_webpage_review",
+    "retrieval_note": "Official source text retrieved through web extraction/search; the service may return cached content. Retrieval date is not the publication date."
+  },
+  {
+    "source_id": "S21",
+    "institution": "NIT Tiruchirappalli",
+    "title": "Hostel Residents Rules and Regulations",
+    "url": "https://www.nitt.edu/home/students/facilitiesnservices/hostelsnmess/NITT_HOSTEL_RESIDENTS_RULES_REGULATIONS_2026-27.pdf",
+    "source_period": "2026-27",
+    "retrieved_on": "2026-11-21",
+    "method": "official_pdf_text_review",
+    "retrieval_note": "Official source text retrieved through web extraction/search; the service may return cached content. Retrieval date is not the publication date."
+  },
+  {
+    "source_id": "S22",
+    "institution": "NIT Tiruchirappalli",
+    "title": "UG first-year odd semester hostel fees",
+    "url": "https://www.nitt.edu/home/students/facilitiesnservices/hostelsnmess/HOSTEL_FEES_ODD_SEM_2026-27_UG_FY.pdf",
+    "source_period": "Odd semester 2026-27; circular 2026-06-15",
+    "retrieved_on": "2026-11-21",
+    "method": "official_pdf_text_review",
+    "retrieval_note": "Official source text retrieved through web extraction/search; the service may return cached content. Retrieval date is not the publication date."
+  },
+  {
+    "source_id": "S23",
+    "institution": "NIT Tiruchirappalli",
+    "title": "Hostels and mess information",
+    "url": "https://www.nitt.edu/home/students/facilitiesnservices/hostelsnmess/",
+    "source_period": "",
+    "retrieved_on": "2026-11-21",
+    "method": "official_webpage_review",
+    "retrieval_note": "Official source text retrieved through web extraction/search; the service may return cached content. Retrieval date is not the publication date."
+  },
+  {
+    "source_id": "S24",
+    "institution": "BITS Pilani",
+    "title": "Leadership",
+    "url": "https://www.bits-pilani.ac.in/about/leadership/",
+    "source_period": "",
+    "retrieved_on": "2026-11-21",
+    "method": "official_webpage_review",
+    "retrieval_note": "Official source text retrieved through web extraction/search; the service may return cached content. Retrieval date is not the publication date."
+  },
+  {
+    "source_id": "S25",
+    "institution": "BITS Pilani",
+    "title": "Student Welfare Division services",
+    "url": "https://swd.bits-pilani.ac.in/510/SWD-Services.aspx",
+    "source_period": "",
+    "retrieved_on": "2026-11-21",
+    "method": "official_webpage_review",
+    "retrieval_note": "Official source text retrieved through web extraction/search; the service may return cached content. Retrieval date is not the publication date."
+  },
+  {
+    "source_id": "S26",
+    "institution": "BITS Pilani",
+    "title": "Malviya Bhawan",
+    "url": "https://swd.bits-pilani.ac.in/malviya-bhawan.aspx",
+    "source_period": "",
+    "retrieved_on": "2026-11-21",
+    "method": "official_webpage_review",
+    "retrieval_note": "Official source text retrieved through web extraction/search; the service may return cached content. Retrieval date is not the publication date."
+  },
+  {
+    "source_id": "S27",
+    "institution": "VIT",
+    "title": "Leadership",
+    "url": "https://vit.ac.in/about/leadership",
+    "source_period": "Page footer: June 2025",
+    "retrieved_on": "2026-11-21",
+    "method": "official_webpage_review",
+    "retrieval_note": "Official source text retrieved through web extraction/search; the service may return cached content. Retrieval date is not the publication date."
+  },
+  {
+    "source_id": "S28",
+    "institution": "VIT",
+    "title": "Governance and Academic Council",
+    "url": "https://vit.ac.in/governance",
+    "source_period": "",
+    "retrieved_on": "2026-11-21",
+    "method": "official_webpage_review",
+    "retrieval_note": "Official source text retrieved through web extraction/search; the service may return cached content. Retrieval date is not the publication date."
+  },
+  {
+    "source_id": "S29",
+    "institution": "VIT",
+    "title": "Vellore hostels and administration",
+    "url": "https://vit.ac.in/campuslife/hostels",
+    "source_period": "Page footer: June 2025; includes 2026-27 download links",
+    "retrieved_on": "2026-11-21",
+    "method": "official_webpage_review",
+    "retrieval_note": "Official source text retrieved through web extraction/search; the service may return cached content. Retrieval date is not the publication date."
+  },
+  {
+    "source_id": "S30",
+    "institution": "IIT Guwahati",
+    "title": "Administration directory",
+    "url": "https://www.iitg.ac.in/iitg_admstr?ct=iitg-administration",
+    "source_period": "",
+    "retrieved_on": "2026-11-21",
+    "method": "official_webpage_review",
+    "retrieval_note": "Official source text retrieved through web extraction/search; the service may return cached content. Retrieval date is not the publication date."
+  },
+  {
+    "source_id": "S31",
+    "institution": "IIT Guwahati",
+    "title": "Campus life and boarding",
+    "url": "https://www.iitg.ac.in/iitg_page_details?page=8/campus-life",
+    "source_period": "",
+    "retrieved_on": "2026-11-21",
+    "method": "official_webpage_review",
+    "retrieval_note": "Official source text retrieved through web extraction/search; the service may return cached content. Retrieval date is not the publication date."
+  }
+]

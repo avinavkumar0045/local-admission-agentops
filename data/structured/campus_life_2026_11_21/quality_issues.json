@@ -1,0 +1,58 @@
+[
+  {
+    "issue_id": "Q01",
+    "source_id": "S07",
+    "field": "Registrar / Dean Academic Affairs / student affairs leadership",
+    "issue": "Duplicated leadership sections list different people or role labels (including Vinayak Kalluri vs R Premkumar as Registrar).",
+    "handling": "Conflicting positions omitted from the clean leadership table pending an appointment order or confirmation."
+  },
+  {
+    "issue_id": "Q02",
+    "source_id": "S24",
+    "field": "Vice Chancellor",
+    "issue": "Same page lists V. Ramgopal Rao as Vice Chancellor and Ranendra Narayan Saha as Acting Vice-Chancellor in different sections.",
+    "handling": "Vice-Chancellor record omitted pending verification."
+  },
+  {
+    "issue_id": "Q03",
+    "source_id": "S30",
+    "field": "Public office emails",
+    "issue": "Directory contains malformed email for alumni office and a different domain for CSE HoD.",
+    "handling": "Affected records omitted; addresses were not guessed or corrected."
+  },
+  {
+    "issue_id": "Q04",
+    "source_id": "S01",
+    "field": "Prior local CSV department mapping",
+    "issue": "Prior CSV assigns K. Geetha to Mechatronics and P. Chitra to generic CSE. The handbook headings identify Architecture and Interior Design, and CSE (Emerging Technologies), respectively.",
+    "handling": "Correct department labels used in this new collection. Prior files retained."
+  },
+  {
+    "issue_id": "Q05",
+    "source_id": "S02",
+    "field": "Appointment currency",
+    "issue": "Annual report covers 2024-25 and cannot prove an office is still held in November 2026.",
+    "handling": "Every affected record marked dated_snapshot. KTR HoDs from S01 are separately labelled 2025-26."
+  },
+  {
+    "issue_id": "Q06",
+    "source_id": "S29",
+    "field": "Update date",
+    "issue": "Page footer says June 2025 while fee download links refer to 2026-27.",
+    "handling": "Footer date retained; retrieval date does not certify appointment recency."
+  },
+  {
+    "issue_id": "Q07",
+    "source_id": "S04",
+    "field": "Hostel rules PDF",
+    "issue": "Rules URL linked by SRM fee circular returned 404 during retrieval.",
+    "handling": "No rules inferred from that unavailable PDF."
+  },
+  {
+    "issue_id": "Q08",
+    "source_id": "S31",
+    "field": "Hostel stock / occupancy",
+    "issue": "Undated campus overview reports single rooms and hostel counts; fresh allocation may differ.",
+    "handling": "Recorded as published overview only, not a room availability promise."
+  }
+]

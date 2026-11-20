@@ -1,0 +1,5 @@
+# Preserve this research package byte-for-byte, including its published checksums.
+/processed/campus_life_2026_11_21/*.pdf binary
+/raw/campus_life_2026_11_21/* -text
+/structured/campus_life_2026_11_21/* -text
+/campus_leadership_hostels_2026_11_21.zip binary
